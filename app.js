@@ -27,6 +27,14 @@ const roleLabels = {
   在线护士: "护",
 };
 
+const rolePresets = [
+  { value: "在线护士", label: "在线护士", roles: ["在线护士"] },
+  { value: "盯群", label: "盯群", roles: ["盯群"] },
+  { value: "转潜", label: "转潜", roles: ["转潜"] },
+  { value: "盯群|转潜", label: "盯群兼转潜", roles: ["盯群", "转潜"] },
+  { value: "在线护士|转潜", label: "护士兼转潜", roles: ["在线护士", "转潜"] },
+];
+
 const storageKey = "customer-service-scheduler-v3";
 
 const state = {
@@ -130,6 +138,12 @@ function hasRole(employee, role) {
   return employee.roles.includes(role);
 }
 
+function rolePresetValue(employee) {
+  const roles = [...employee.roles].sort().join("|");
+  const preset = rolePresets.find((item) => [...item.roles].sort().join("|") === roles);
+  return preset?.value || employee.roles.join("|");
+}
+
 function isDayWorker(employeeId, dateKey) {
   const shift = getCell(employeeId, dateKey).shift;
   return shift !== "off" && shift !== "night";
@@ -230,6 +244,11 @@ function renderEmployees() {
             <strong>${escapeHtml(employee.name)}</strong>
             <p>${employee.locked ? "已确认锁定" : "可调整"} · ${summary.total} 天</p>
             <div class="tag-row">${employee.roles.map((role) => `<span class="tag ${roleClass(role)}">${role}</span>`).join("")}</div>
+            <select class="role-select" data-role-select="${employee.id}" aria-label="切换${escapeHtml(employee.name)}身份">
+              ${rolePresets
+                .map((preset) => `<option value="${preset.value}" ${preset.value === rolePresetValue(employee) ? "selected" : ""}>${preset.label}</option>`)
+                .join("")}
+            </select>
           </div>
           <div class="employee-actions">
             <button data-edit-employee="${employee.id}" title="修改名字">改名</button>
@@ -246,12 +265,34 @@ function renderEmployees() {
   document.querySelectorAll("[data-delete-employee]").forEach((button) => {
     button.addEventListener("click", () => deleteEmployee(button.dataset.deleteEmployee));
   });
+  document.querySelectorAll("[data-role-select]").forEach((select) => {
+    select.addEventListener("change", (event) => changeEmployeeRoles(event.target.dataset.roleSelect, event.target.value));
+  });
 }
 
 function roleClass(role) {
   if (role === "转潜") return "convert";
   if (role === "在线护士") return "nurse";
   return "watch";
+}
+
+function changeEmployeeRoles(employeeId, presetValue) {
+  const employee = employees.find((item) => item.id === employeeId);
+  const preset = rolePresets.find((item) => item.value === presetValue);
+  if (!employee || !preset) return;
+
+  pushUndo();
+  employee.roles = [...preset.roles];
+  Object.entries(state.schedule[employee.id] || {}).forEach(([dateKey, cell]) => {
+    if (cell.shift === "off" || cell.shift === "night") {
+      state.schedule[employee.id][dateKey] = { ...cell, role: "" };
+      return;
+    }
+    const nextRole = hasRole(employee, cell.role) ? cell.role : defaultRole(employee, cell.shift);
+    state.schedule[employee.id][dateKey] = { shift: nextRole === "转潜" ? "middle" : cell.shift, role: nextRole };
+  });
+  render();
+  showToast(`${employee.name} 已切换为${preset.label}`);
 }
 
 function renderTable() {
@@ -580,7 +621,7 @@ function renderConfirmations() {
 
 function fixConvert(dateKey) {
   const employee = employees.find((emp) => !emp.locked && hasRole(emp, "转潜") && getCell(emp.id, dateKey).shift !== "night");
-  return employee && setCell(employee.id, dateKey, "early");
+  return employee && setCell(employee.id, dateKey, "middle", "转潜");
 }
 
 function fixSupport(dateKey) {
@@ -847,10 +888,12 @@ document.getElementById("addEmployeeBtn").addEventListener("click", () => {
   if (!name) return;
   pushUndo();
   const id = `e${Date.now()}`;
-  employees.push({ id, name: name.trim(), roles: ["盯群"], night: "可排", locked: false });
+  const employee = { id, name: name.trim(), roles: ["盯群"], night: "可排", locked: false };
+  employees.push(employee);
   state.schedule[id] = {};
   state.dates.forEach((date, index) => {
-    state.schedule[id][date.key] = { shift: index % 6 === 5 ? "off" : "early" };
+    const shift = index % 6 === 5 ? "off" : "early";
+    state.schedule[id][date.key] = { shift, role: defaultRole(employee, shift) };
   });
   render();
   showToast("人员已添加");

@@ -330,6 +330,18 @@ button:active {
   font-size: 12px;
 }
 
+.role-select {
+  width: 100%;
+  margin-top: 7px;
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #263840;
+  font-size: 12px;
+  padding: 0 8px;
+}
+
 .tag-row {
   display: flex;
   flex-wrap: wrap;
