@@ -41,7 +41,6 @@ body {
 
 button,
 select,
-textarea,
 input {
   font: inherit;
 }
@@ -242,6 +241,22 @@ button:active {
   font-size: 12px;
 }
 
+.employee-actions {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.employee-actions button {
+  min-height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #43525a;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
 .tag-row {
   display: flex;
   flex-wrap: wrap;
@@ -273,17 +288,29 @@ button:active {
   background: #e6efff;
 }
 
-textarea {
-  width: 100%;
+.shift-notes {
   margin-top: 10px;
-  resize: vertical;
+  display: grid;
+  gap: 8px;
+}
+
+.shift-notes div {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 8px;
+  padding: 8px 9px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 10px;
-  color: var(--text);
   background: #fbfcfc;
-  line-height: 1.55;
-  outline-color: var(--accent);
+  font-size: 12px;
+}
+
+.shift-notes strong {
+  color: #263840;
+}
+
+.shift-notes span {
+  color: var(--muted);
 }
 
 .rule-cards {
@@ -294,7 +321,7 @@ textarea {
 
 .rule-card {
   display: grid;
-  grid-template-columns: 24px 1fr auto;
+  grid-template-columns: 24px 1fr;
   align-items: center;
   gap: 8px;
   padding: 9px;
@@ -328,24 +355,10 @@ textarea {
   font-size: 11px;
 }
 
-.source-links {
-  margin-top: 10px;
-  display: grid;
-  gap: 7px;
-}
-
-.source-links a {
-  padding: 8px 9px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fbfcfc;
-  font-size: 12px;
-}
-
 .schedule-panel {
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) 58px;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .schedule-tools {
@@ -401,6 +414,11 @@ textarea {
   font-weight: 600;
 }
 
+.schedule-table th.weekend {
+  background: #fff6e5;
+  color: #7a4a0b;
+}
+
 .schedule-table .name-col,
 .schedule-table .name-cell {
   position: sticky;
@@ -423,6 +441,10 @@ textarea {
   z-index: 4;
   min-width: 82px;
   background: #fbfcfc;
+}
+
+.schedule-table td.weekend {
+  background: #fffcf4;
 }
 
 .schedule-table th.summary-col {
@@ -520,23 +542,6 @@ textarea {
   color: #66757e;
 }
 
-.duty-row {
-  display: flex;
-  gap: 3px;
-  margin-top: 4px;
-}
-
-.duty {
-  min-width: 18px;
-  height: 17px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 5px;
-  background: #eef3f4;
-  color: #33444c;
-  font-size: 10px;
-}
-
 .warning-mark {
   position: absolute;
   right: 4px;
@@ -561,31 +566,6 @@ textarea {
 
 .balance-bad {
   color: var(--danger);
-}
-
-.daily-summary {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-  padding: 9px 14px;
-  border-top: 1px solid var(--line);
-  background: #fbfcfc;
-}
-
-.daily-stat {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-  font-size: 12px;
-}
-
-.daily-stat strong {
-  font-size: 15px;
 }
 
 .toggle {
@@ -683,6 +663,25 @@ textarea {
   border-radius: 8px;
   background: #fff;
   box-shadow: var(--shadow);
+}
+
+.toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 40;
+  max-width: 360px;
+  padding: 11px 14px;
+  border: 1px solid #a7d7d1;
+  border-radius: 8px;
+  background: #ecfaf8;
+  color: #075f55;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+
+.toast[hidden] {
+  display: none;
 }
 
 .quick-editor[hidden] {

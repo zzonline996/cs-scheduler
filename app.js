@@ -1,28 +1,27 @@
 const employees = [
-  { id: "e1", name: "林晓", roles: ["转潜", "盯群"], night: "愿意", locked: false },
-  { id: "e2", name: "周宁", roles: ["在线护士"], night: "不愿意", locked: false },
-  { id: "e3", name: "陈雅", roles: ["盯群", "在线护士"], night: "可少量", locked: false },
-  { id: "e4", name: "黄洁", roles: ["转潜"], night: "愿意", locked: false },
-  { id: "e5", name: "王敏", roles: ["在线护士"], night: "可少量", locked: false },
-  { id: "e6", name: "刘倩", roles: ["盯群"], night: "不愿意", locked: false },
-  { id: "e7", name: "赵琳", roles: ["转潜", "在线护士"], night: "愿意", locked: false },
-  { id: "e8", name: "孙婷", roles: ["盯群"], night: "可少量", locked: false },
-  { id: "e9", name: "何悦", roles: ["在线护士"], night: "愿意", locked: false },
-  { id: "e10", name: "吴梦", roles: ["转潜"], night: "不愿意", locked: false },
+  { id: "e1", name: "谢诗磊", roles: ["在线护士"], night: "可排", locked: false },
+  { id: "e2", name: "汪晓萱", roles: ["在线护士"], night: "可排", locked: false },
+  { id: "e3", name: "盛婷", roles: ["在线护士"], night: "可排", locked: false },
+  { id: "e4", name: "邓嘉妍", roles: ["在线护士"], night: "可排", locked: false },
+  { id: "e5", name: "李雅盈", roles: ["在线护士"], night: "可排", locked: false },
+  { id: "e6", name: "熊娇娇", roles: ["盯群"], night: "可排", locked: false },
+  { id: "e7", name: "刘安安", roles: ["盯群"], night: "可排", locked: false },
+  { id: "e8", name: "郭金炎", roles: ["盯群"], night: "可排", locked: false },
+  { id: "e9", name: "唐蓓", roles: ["盯群"], night: "可排", locked: false },
+  { id: "e10", name: "朱慧妮", roles: ["盯群"], night: "可排", locked: false },
+  { id: "e11", name: "胡琳佳", roles: ["兼职盯群"], night: "可排", locked: false },
+  { id: "e12", name: "方菲菲", roles: ["盯群"], night: "可排", locked: false },
+  { id: "e13", name: "张婉柠", roles: ["转潜"], night: "可排", locked: false },
 ];
 
 const shiftMap = {
-  early: { label: "早", hours: 8, white: 8, night: 0 },
-  middle: { label: "中", hours: 8, white: 8, night: 0 },
-  night: { label: "晚", hours: 10, white: 0, night: 10 },
-  off: { label: "休", hours: 0, white: 0, night: 0 },
+  early: { label: "早", whiteDays: 1, nightDays: 0, workDays: 1 },
+  middle: { label: "中", whiteDays: 1, nightDays: 0, workDays: 1 },
+  night: { label: "晚", whiteDays: 0, nightDays: 1.5, workDays: 1.5 },
+  off: { label: "休", whiteDays: 0, nightDays: 0, workDays: 0 },
 };
 
-const dutyMap = {
-  convert: { label: "转", role: "转潜" },
-  watch: { label: "群", role: "盯群" },
-  nurse: { label: "护", role: "在线护士" },
-};
+const storageKey = "customer-service-scheduler-v2";
 
 const state = {
   dates: makeDates("2026-07"),
@@ -39,11 +38,11 @@ const el = {
   employeeList: document.getElementById("employeeList"),
   ruleCards: document.getElementById("ruleCards"),
   table: document.getElementById("scheduleTable"),
-  dailySummary: document.getElementById("dailySummary"),
   conflictList: document.getElementById("conflictList"),
   confirmList: document.getElementById("confirmList"),
   quickEditor: document.getElementById("quickEditor"),
   conflictOnly: document.getElementById("conflictOnly"),
+  toast: document.getElementById("toast"),
 };
 
 function makeDates(month) {
@@ -56,6 +55,7 @@ function makeDates(month) {
       day: d.getDate(),
       week: "日一二三四五六"[d.getDay()],
       weekday: d.getDay(),
+      weekend: d.getDay() === 0 || d.getDay() === 6,
     });
   }
   return dates;
@@ -68,109 +68,140 @@ function createInitialSchedule() {
     state.dates.forEach((date, colIndex) => {
       const cycle = (rowIndex + colIndex) % 8;
       let shift = cycle === 6 || cycle === 7 ? "off" : cycle < 3 ? "early" : "middle";
-      if (employee.night !== "不愿意" && (rowIndex * 3 + colIndex) % 13 === 0) shift = "night";
-      const duties = [];
-      if (shift !== "off" && shift !== "night") {
-        if (employee.roles.includes("转潜") && (rowIndex + colIndex) % 3 === 0) duties.push("convert");
-        if (employee.roles.includes("盯群") && (rowIndex + colIndex) % 2 === 0) duties.push("watch");
-        if (employee.roles.includes("在线护士") && (rowIndex + colIndex) % 2 === 1) duties.push("nurse");
-      }
-      state.schedule[employee.id][date.key] = { shift, duties };
+      if ((rowIndex * 2 + colIndex) % 17 === 0) shift = "night";
+      state.schedule[employee.id][date.key] = { shift };
     });
   });
   normalizeCoverage();
 }
 
 function normalizeCoverage() {
+  let changed = 0;
   state.dates.forEach((date, colIndex) => {
-    const dayWorkers = employees.filter((emp) => getCell(emp.id, date.key).shift !== "off" && getCell(emp.id, date.key).shift !== "night");
-    const convert = dayWorkers.find((emp) => emp.roles.includes("转潜"));
-    if (convert && !getCell(convert.id, date.key).duties.includes("convert")) {
-      getCell(convert.id, date.key).duties.push("convert");
+    const workers = employees.filter((emp) => isDayWorker(emp.id, date.key));
+
+    if (!workers.some((emp) => hasRole(emp, "转潜"))) {
+      const convert = firstUnlockedByRole("转潜", date.key);
+      if (convert) {
+        setCell(convert.id, date.key, colIndex % 2 ? "middle" : "early");
+        changed += 1;
+      }
     }
-    const coverage = dayWorkers.filter((emp) => emp.roles.includes("盯群") || emp.roles.includes("在线护士")).slice(0, 3);
-    coverage.forEach((emp, index) => {
-      const cell = getCell(emp.id, date.key);
-      const duty = emp.roles.includes("在线护士") && index > 0 ? "nurse" : "watch";
-      if (emp.roles.includes(dutyMap[duty].role) && !cell.duties.includes(duty)) cell.duties.push(duty);
-    });
-    const off = employees.filter((emp) => getCell(emp.id, date.key).shift === "off");
-    if (off.length > 5) off.slice(5).forEach((emp, index) => setCell(emp.id, date.key, index % 2 ? "middle" : "early"));
-    if (off.length < 1) setCell(employees[(colIndex + 5) % employees.length].id, date.key, "off");
+
+    let support = employees.filter((emp) => isDayWorker(emp.id, date.key) && isSupport(emp)).length;
+    if (support < 3) {
+      employees
+        .filter((emp) => !emp.locked && isSupport(emp) && getCell(emp.id, date.key).shift === "off")
+        .slice(0, 3 - support)
+        .forEach((emp, index) => {
+          setCell(emp.id, date.key, index % 2 ? "middle" : "early");
+          changed += 1;
+          support += 1;
+        });
+    }
   });
+  return changed;
+}
+
+function firstUnlockedByRole(role, dateKey) {
+  return employees.find((emp) => !emp.locked && hasRole(emp, role) && getCell(emp.id, dateKey).shift !== "night");
+}
+
+function isSupport(employee) {
+  return hasRole(employee, "盯群") || hasRole(employee, "在线护士") || hasRole(employee, "兼职盯群");
+}
+
+function hasRole(employee, role) {
+  return employee.roles.includes(role);
+}
+
+function isDayWorker(employeeId, dateKey) {
+  const shift = getCell(employeeId, dateKey).shift;
+  return shift !== "off" && shift !== "night";
 }
 
 function getCell(employeeId, dateKey) {
-  return state.schedule[employeeId][dateKey];
+  return state.schedule[employeeId]?.[dateKey] || { shift: "off" };
 }
 
-function setCell(employeeId, dateKey, shift, preserveDuties = false) {
+function setCell(employeeId, dateKey, shift) {
   const employee = employees.find((item) => item.id === employeeId);
-  if (!employee || employee.locked) return;
-  const duties = preserveDuties ? getCell(employeeId, dateKey).duties : defaultDuties(employee, shift);
-  state.schedule[employeeId][dateKey] = { shift, duties };
+  if (!employee || employee.locked) return false;
+  if (!state.schedule[employeeId]) state.schedule[employeeId] = {};
+  state.schedule[employeeId][dateKey] = { shift };
+  return true;
 }
 
-function defaultDuties(employee, shift) {
-  if (shift === "off" || shift === "night") return [];
-  if (employee.roles.includes("转潜")) return ["convert"];
-  if (employee.roles.includes("在线护士")) return ["nurse"];
-  if (employee.roles.includes("盯群")) return ["watch"];
-  return [];
+function snapshot() {
+  return JSON.stringify({
+    schedule: state.schedule,
+    employees: employees.map((emp) => ({ ...emp, roles: [...emp.roles] })),
+  });
 }
 
 function pushUndo() {
-  state.undo.push(JSON.stringify({ schedule: state.schedule, employees: employees.map((emp) => ({ id: emp.id, locked: emp.locked })) }));
+  state.undo.push(snapshot());
   if (state.undo.length > 40) state.undo.shift();
   state.redo = [];
 }
 
-function restore(snapshot) {
-  const parsed = JSON.parse(snapshot);
+function restore(data) {
+  const parsed = JSON.parse(data);
+  employees.splice(0, employees.length, ...parsed.employees.map((emp) => ({ ...emp, roles: [...emp.roles] })));
   state.schedule = parsed.schedule;
-  parsed.employees.forEach((item) => {
-    const emp = employees.find((employee) => employee.id === item.id);
-    if (emp) emp.locked = item.locked;
-  });
   render();
 }
 
 function render() {
   renderEmployees();
   renderTable();
-  renderDailySummary();
   renderChecks();
   renderConfirmations();
 }
 
 function renderEmployees() {
   el.employeeList.innerHTML = employees
-    .map(
-      (employee) => `
+    .map((employee) => {
+      const summary = summaryFor(employee.id);
+      return `
         <div class="employee-card">
           <div>
-            <strong>${employee.name}</strong>
-            <p>夜班：${employee.night}${employee.locked ? " · 已锁定" : ""}</p>
+            <strong>${escapeHtml(employee.name)}</strong>
+            <p>${employee.locked ? "已确认锁定" : "可调整"} · ${summary.total} 天</p>
             <div class="tag-row">${employee.roles.map((role) => `<span class="tag ${roleClass(role)}">${role}</span>`).join("")}</div>
           </div>
-          <span class="status-pill">${summaryFor(employee.id).total}h</span>
+          <div class="employee-actions">
+            <button data-edit-employee="${employee.id}" title="修改名字">改名</button>
+            <button data-delete-employee="${employee.id}" title="删除人员">删除</button>
+          </div>
         </div>
-      `,
-    )
+      `;
+    })
     .join("");
+
+  document.querySelectorAll("[data-edit-employee]").forEach((button) => {
+    button.addEventListener("click", () => editEmployee(button.dataset.editEmployee));
+  });
+  document.querySelectorAll("[data-delete-employee]").forEach((button) => {
+    button.addEventListener("click", () => deleteEmployee(button.dataset.deleteEmployee));
+  });
 }
 
 function roleClass(role) {
-  return role === "转潜" ? "convert" : role === "盯群" ? "watch" : "nurse";
+  if (role === "转潜") return "convert";
+  if (role === "在线护士") return "nurse";
+  return "watch";
 }
 
 function renderTable() {
-  const dayHeaders = state.dates.map((date) => `<th>${date.day}<br><span>周${date.week}</span></th>`).join("");
+  const dayHeaders = state.dates
+    .map((date) => `<th class="${date.weekend ? "weekend" : ""}">${date.day}<br><span>周${date.week}</span></th>`)
+    .join("");
   const summaryHeaders = [
     ["rest", "休息<br>天数"],
-    ["day", "白班<br>时长"],
-    ["night", "夜班<br>时长"],
-    ["total", "上班<br>总时长"],
+    ["day", "白班<br>天数"],
+    ["night", "夜班<br>天数"],
+    ["total", "上班<br>天数"],
     ["balance", "均衡<br>提示"],
   ]
     .map(([cls, label]) => `<th class="summary-col ${cls}">${label}</th>`)
@@ -178,21 +209,19 @@ function renderTable() {
 
   const body = employees
     .map((employee) => {
-      const cells = state.dates
-        .map((date) => renderCell(employee, date))
-        .join("");
+      const cells = state.dates.map((date) => renderCell(employee, date)).join("");
       const summary = summaryFor(employee.id);
       return `
         <tr class="${employee.locked ? "locked-row" : ""}">
           <td class="name-cell">
-            <strong>${employee.name}</strong>
+            <strong>${escapeHtml(employee.name)}</strong>
             <span class="small">${employee.roles.join(" / ")}</span>
           </td>
           ${cells}
-          <td class="summary-cell rest">${summary.rest}</td>
-          <td class="summary-cell day">${summary.white}h</td>
-          <td class="summary-cell night">${summary.night}h</td>
-          <td class="summary-cell total">${summary.total}h</td>
+          <td class="summary-cell rest">${formatDays(summary.rest)}</td>
+          <td class="summary-cell day">${formatDays(summary.white)}</td>
+          <td class="summary-cell night">${formatDays(summary.night)}</td>
+          <td class="summary-cell total">${formatDays(summary.total)}</td>
           <td class="summary-cell balance ${summary.balanceClass}">${summary.balance}</td>
         </tr>
       `;
@@ -206,14 +235,12 @@ function renderTable() {
 function renderCell(employee, date) {
   const cell = getCell(employee.id, date.key);
   const warnings = cellWarnings(employee.id, date.key);
-  const duties = cell.duties.map((duty) => `<span class="duty">${dutyMap[duty].label}</span>`).join("");
   return `
-    <td class="cell shift-${cell.shift} ${employee.locked ? "locked" : ""}"
+    <td class="cell shift-${cell.shift} ${date.weekend ? "weekend" : ""} ${employee.locked ? "locked" : ""}"
       tabindex="0"
       data-employee="${employee.id}"
       data-date="${date.key}">
       <span class="shift-chip ${cell.shift}">${shiftMap[cell.shift].label}</span>
-      <div class="duty-row">${duties}</div>
       ${warnings.length ? `<span class="warning-mark">!</span>` : ""}
     </td>
   `;
@@ -236,7 +263,7 @@ function selectCell(cell, event) {
     return;
   }
   if (state.brush !== "none") {
-    paintCell(cell, true);
+    paintCell(cell, event, true);
     return;
   }
   showQuickEditor(cell, event);
@@ -247,11 +274,12 @@ function paintCell(cell, event, force = false) {
   if (!force && event.buttons !== 1) return;
   const employeeId = cell.dataset.employee;
   const dateKey = cell.dataset.date;
-  const emp = employees.find((employee) => employee.id === employeeId);
-  if (emp?.locked) return;
+  if (employees.find((employee) => employee.id === employeeId)?.locked) return;
   pushUndo();
-  setCell(employeeId, dateKey, state.brush);
-  render();
+  if (setCell(employeeId, dateKey, state.brush)) {
+    render();
+    showToast(`已调整为${shiftMap[state.brush].label}班`);
+  }
 }
 
 function handleSwap(target) {
@@ -269,65 +297,49 @@ function handleSwap(target) {
   state.schedule[state.swapFrom.employeeId][state.swapFrom.dateKey] = second;
   state.schedule[target.employeeId][target.dateKey] = first;
   state.swapFrom = null;
-  document.getElementById("selectionHint").textContent = "交换完成。";
   render();
+  showToast("已交换 2 个班次");
 }
 
 function showQuickEditor(cell, event) {
   const rect = cell.getBoundingClientRect();
   el.quickEditor.hidden = false;
-  el.quickEditor.style.left = `${Math.min(rect.left, window.innerWidth - 286)}px`;
-  el.quickEditor.style.top = `${Math.min(rect.bottom + 6, window.innerHeight - 214)}px`;
+  el.quickEditor.style.left = `${Math.min(rect.left, window.innerWidth - 220)}px`;
+  el.quickEditor.style.top = `${Math.min(rect.bottom + 6, window.innerHeight - 128)}px`;
   event.stopPropagation();
 }
 
 function summaryFor(employeeId) {
   const entries = Object.values(state.schedule[employeeId] || {});
   const rest = entries.filter((cell) => cell.shift === "off").length;
-  const white = entries.reduce((sum, cell) => sum + shiftMap[cell.shift].white, 0);
-  const night = entries.reduce((sum, cell) => sum + shiftMap[cell.shift].night, 0);
+  const white = entries.reduce((sum, cell) => sum + shiftMap[cell.shift].whiteDays, 0);
+  const night = entries.reduce((sum, cell) => sum + shiftMap[cell.shift].nightDays, 0);
   const total = white + night;
-  const allTotals = employees.map((employee) => Object.values(state.schedule[employee.id] || {}).reduce((sum, cell) => sum + shiftMap[cell.shift].hours, 0));
+  const allTotals = employees.map((employee) =>
+    Object.values(state.schedule[employee.id] || {}).reduce((sum, cell) => sum + shiftMap[cell.shift].workDays, 0),
+  );
   const avg = allTotals.reduce((sum, value) => sum + value, 0) / allTotals.length || total;
   const diff = total - avg;
-  if (Math.abs(diff) <= 10) return { rest, white, night, total, balance: "均衡", balanceClass: "balance-ok" };
-  if (diff > 10) return { rest, white, night, total, balance: `偏高${Math.round(diff)}h`, balanceClass: "balance-warn" };
-  return { rest, white, night, total, balance: `偏低${Math.abs(Math.round(diff))}h`, balanceClass: "balance-bad" };
+  if (Math.abs(diff) <= 1.5) return { rest, white, night, total, balance: "均衡", balanceClass: "balance-ok" };
+  if (diff > 1.5) return { rest, white, night, total, balance: `偏高${formatDays(diff)}`, balanceClass: "balance-warn" };
+  return { rest, white, night, total, balance: `偏低${formatDays(Math.abs(diff))}`, balanceClass: "balance-bad" };
 }
 
-function daySummary(dateKey) {
-  const cells = employees.map((employee) => getCell(employee.id, dateKey));
+function formatDays(value) {
+  return Number.isInteger(value) ? `${value}` : `${value.toFixed(1).replace(".0", "")}`;
+}
+
+function coverageFor(dateKey) {
+  const dayWorkers = employees.filter((emp) => isDayWorker(emp.id, dateKey));
   return {
-    rest: cells.filter((cell) => cell.shift === "off").length,
-    early: cells.filter((cell) => cell.shift === "early").length,
-    middle: cells.filter((cell) => cell.shift === "middle").length,
-    night: cells.filter((cell) => cell.shift === "night").length,
-    convert: cells.filter((cell) => cell.shift !== "night" && cell.shift !== "off" && cell.duties.includes("convert")).length,
-    support: cells.filter((cell) => cell.shift !== "night" && cell.shift !== "off" && (cell.duties.includes("watch") || cell.duties.includes("nurse"))).length,
+    convert: dayWorkers.filter((emp) => hasRole(emp, "转潜")).length,
+    support: dayWorkers.filter((emp) => isSupport(emp)).length,
+    earlySupport: dayWorkers.filter((emp) => getCell(emp.id, dateKey).shift === "early" && isSupport(emp)).length,
   };
-}
-
-function renderDailySummary() {
-  const selectedDate = state.selected?.dateKey || state.dates[0].key;
-  const stats = daySummary(selectedDate);
-  const date = state.dates.find((item) => item.key === selectedDate);
-  el.dailySummary.innerHTML = [
-    ["日期", `${date.day} 日`],
-    ["休息人数", stats.rest],
-    ["早班人数", stats.early],
-    ["中班人数", stats.middle],
-    ["夜班人数", stats.night],
-    ["转潜/盯群护士", `${stats.convert}/${stats.support}`],
-  ]
-    .map(([label, value]) => `<div class="daily-stat"><span>${label}</span><strong>${value}</strong></div>`)
-    .join("");
 }
 
 function cellWarnings(employeeId, dateKey) {
   const warnings = [];
-  const cell = getCell(employeeId, dateKey);
-  const employee = employees.find((item) => item.id === employeeId);
-  if (cell.shift === "night" && employee.night === "不愿意") warnings.push("夜班意向不匹配");
   if (continuousWorkDays(employeeId, dateKey) > 7) warnings.push("连续上班超过 7 天");
   return warnings;
 }
@@ -349,22 +361,42 @@ function continuousWorkDays(employeeId, dateKey) {
 function allConflicts() {
   const conflicts = [];
   state.dates.forEach((date) => {
-    const stats = daySummary(date.key);
-    if (stats.rest > 5 || stats.rest < 1) {
-      conflicts.push({ level: "bad", title: `${date.day} 日休息人数异常`, desc: `当前休息 ${stats.rest} 人，建议控制在 1-5 人。`, action: () => fixRest(date.key) });
+    const coverage = coverageFor(date.key);
+    if (coverage.convert < 1) {
+      conflicts.push({
+        level: "bad",
+        title: `${date.day} 日转潜无人`,
+        desc: "白班至少需要 1 名转潜在岗。",
+        action: () => fixConvert(date.key),
+      });
     }
-    if (stats.convert < 1) {
-      conflicts.push({ level: "bad", title: `${date.day} 日转潜无人`, desc: "白班至少需要 1 名转潜在岗。", action: () => fixConvert(date.key) });
+    if (coverage.support < 3) {
+      conflicts.push({
+        level: "bad",
+        title: `${date.day} 日盯群/护士不足`,
+        desc: `当前 ${coverage.support} 人，至少需要 3 人。`,
+        action: () => fixSupport(date.key),
+      });
     }
-    if (stats.support < 3) {
-      conflicts.push({ level: "bad", title: `${date.day} 日盯群/护士不足`, desc: `当前 ${stats.support} 人，至少需要 3 人。`, action: () => fixSupport(date.key) });
+    if (coverage.earlySupport < 2) {
+      conflicts.push({
+        level: "warn",
+        title: `${date.day} 日早班覆盖偏少`,
+        desc: `当前早班盯群/护士 ${coverage.earlySupport} 人，建议优先保证 2 人。`,
+        action: () => fixEarlySupport(date.key),
+      });
     }
   });
+
   employees.forEach((employee) => {
     state.dates.forEach((date) => {
-      const warnings = cellWarnings(employee.id, date.key);
-      warnings.forEach((warning) => {
-        conflicts.push({ level: "warn", title: `${employee.name} ${date.day} 日`, desc: warning, action: () => setCell(employee.id, date.key, "off") });
+      cellWarnings(employee.id, date.key).forEach((warning) => {
+        conflicts.push({
+          level: "warn",
+          title: `${employee.name} ${date.day} 日`,
+          desc: warning,
+          action: () => setCell(employee.id, date.key, "off"),
+        });
       });
     });
   });
@@ -373,24 +405,27 @@ function allConflicts() {
 
 function renderChecks() {
   const conflicts = allConflicts();
-  const hard = conflicts.filter((item) => item.level === "bad").length;
-  const warn = conflicts.filter((item) => item.level === "warn").length;
+  const ruleStatus = {
+    convert: conflicts.some((item) => item.title.includes("转潜")),
+    support: conflicts.some((item) => item.title.includes("盯群")),
+    continuous: conflicts.some((item) => item.desc.includes("连续上班")),
+    early: conflicts.some((item) => item.title.includes("早班覆盖")),
+  };
   const cards = [
-    ["连续上班≤7天", warn ? `${warn} 处需看` : "已满足", warn ? "warn" : ""],
-    ["早中班每周轮换", "建议性规则", ""],
-    ["转潜每日≥1人", conflicts.some((item) => item.title.includes("转潜")) ? "需处理" : "已满足", conflicts.some((item) => item.title.includes("转潜")) ? "bad" : ""],
-    ["盯群/在线护士≥3人", conflicts.some((item) => item.title.includes("盯群")) ? "需处理" : "已满足", conflicts.some((item) => item.title.includes("盯群")) ? "bad" : ""],
-    ["早班优先覆盖", "可微调", ""],
-    ["每日休息1-5人", conflicts.some((item) => item.title.includes("休息人数")) ? "需处理" : "已满足", conflicts.some((item) => item.title.includes("休息人数")) ? "bad" : ""],
+    ["连续上班≤7天", ruleStatus.continuous ? "需处理" : "已满足", ruleStatus.continuous ? "bad" : ""],
+    ["早中班尽量一周一换", "建议性规则", ""],
+    ["转潜每日≥1人", ruleStatus.convert ? "需处理" : "已满足", ruleStatus.convert ? "bad" : ""],
+    ["盯群/在线护士≥3人", ruleStatus.support ? "需处理" : "已满足", ruleStatus.support ? "bad" : ""],
+    ["盯群/护士优先两个早班", ruleStatus.early ? "可优化" : "已满足", ruleStatus.early ? "warn" : ""],
   ];
   el.ruleCards.innerHTML = cards
-    .map(([title, note, cls]) => `<div class="rule-card ${cls}"><span class="dot"></span><div><strong>${title}</strong><span>${note}</span></div><span>${cls === "bad" ? "修" : "看"}</span></div>`)
+    .map(([title, note, cls]) => `<div class="rule-card ${cls}"><span class="dot"></span><div><strong>${title}</strong><span>${note}</span></div></div>`)
     .join("");
 
   const visible = state.filterConflict ? conflicts : conflicts.slice(0, 9);
   el.conflictList.innerHTML =
     visible.length === 0
-      ? `<div class="conflict-item"><strong>暂无硬冲突</strong><p>可以继续看均衡统计和员工确认状态。</p></div>`
+      ? `<div class="conflict-item"><strong>暂无硬冲突</strong><p>可以继续微调人员确认和均衡天数。</p></div>`
       : visible
           .map(
             (item, index) => `
@@ -407,9 +442,12 @@ function renderChecks() {
       pushUndo();
       visible[Number(button.dataset.fix)].action();
       render();
+      showToast("已处理 1 项排班检查");
     });
   });
-  document.getElementById("selectionHint").textContent = hard ? `当前有 ${hard} 个硬冲突，优先处理右侧列表。` : "点击单元格修改；开启刷子后可拖动批量填充。";
+  document.getElementById("selectionHint").textContent = conflicts.some((item) => item.level === "bad")
+    ? "右侧有排班冲突，可一键处理后再微调。"
+    : "点击单元格修改；开启刷子后可拖动批量填充。";
 }
 
 function renderConfirmations() {
@@ -418,7 +456,7 @@ function renderConfirmations() {
       (employee) => `
         <label class="confirm-row">
           <input type="checkbox" data-lock="${employee.id}" ${employee.locked ? "checked" : ""} />
-          <span>${employee.name}</span>
+          <span>${escapeHtml(employee.name)}</span>
           <span>${employee.locked ? "已确认" : "待确认"}</span>
         </label>
       `,
@@ -430,110 +468,136 @@ function renderConfirmations() {
       const employee = employees.find((item) => item.id === event.target.dataset.lock);
       employee.locked = event.target.checked;
       render();
+      showToast(employee.locked ? `${employee.name} 已锁定` : `${employee.name} 已解锁`);
     });
   });
 }
 
-function fixRest(dateKey) {
-  const stats = daySummary(dateKey);
-  if (stats.rest > 5) {
-    employees
-      .filter((employee) => !employee.locked && getCell(employee.id, dateKey).shift === "off")
-      .slice(5)
-      .forEach((employee, index) => setCell(employee.id, dateKey, index % 2 ? "middle" : "early"));
-  }
-  if (stats.rest < 1) {
-    const employee = employees.find((emp) => !emp.locked && getCell(emp.id, dateKey).shift !== "night");
-    if (employee) setCell(employee.id, dateKey, "off");
-  }
-}
-
 function fixConvert(dateKey) {
-  const employee = employees.find((emp) => !emp.locked && emp.roles.includes("转潜") && getCell(emp.id, dateKey).shift !== "night");
-  if (!employee) return;
-  const cell = getCell(employee.id, dateKey);
-  if (cell.shift === "off") setCell(employee.id, dateKey, "early");
-  if (!getCell(employee.id, dateKey).duties.includes("convert")) getCell(employee.id, dateKey).duties.push("convert");
+  const employee = employees.find((emp) => !emp.locked && hasRole(emp, "转潜") && getCell(emp.id, dateKey).shift !== "night");
+  return employee && setCell(employee.id, dateKey, "early");
 }
 
 function fixSupport(dateKey) {
+  let changed = 0;
   employees
-    .filter((emp) => !emp.locked && (emp.roles.includes("盯群") || emp.roles.includes("在线护士")) && getCell(emp.id, dateKey).shift !== "night")
-    .slice(0, 3)
-    .forEach((employee) => {
-      if (getCell(employee.id, dateKey).shift === "off") setCell(employee.id, dateKey, "early");
-      const duty = employee.roles.includes("在线护士") ? "nurse" : "watch";
-      if (!getCell(employee.id, dateKey).duties.includes(duty)) getCell(employee.id, dateKey).duties.push(duty);
+    .filter((emp) => !emp.locked && isSupport(emp) && getCell(emp.id, dateKey).shift === "off")
+    .slice(0, Math.max(0, 3 - coverageFor(dateKey).support))
+    .forEach((employee, index) => {
+      if (setCell(employee.id, dateKey, index % 2 ? "middle" : "early")) changed += 1;
     });
+  return changed;
+}
+
+function fixEarlySupport(dateKey) {
+  let changed = 0;
+  employees
+    .filter((emp) => !emp.locked && isSupport(emp) && getCell(emp.id, dateKey).shift === "middle")
+    .slice(0, Math.max(0, 2 - coverageFor(dateKey).earlySupport))
+    .forEach((employee) => {
+      if (setCell(employee.id, dateKey, "early")) changed += 1;
+    });
+  return changed;
 }
 
 function copyWeek() {
-  if (!state.selected) return;
+  if (!state.selected) return 0;
+  const employee = employees.find((item) => item.id === state.selected.employeeId);
+  if (employee?.locked) return 0;
   const dateIndex = state.dates.findIndex((date) => date.key === state.selected.dateKey);
   const weekStart = Math.max(0, dateIndex - state.dates[dateIndex].weekday);
   const source = getCell(state.selected.employeeId, state.selected.dateKey);
-  pushUndo();
+  let changed = 0;
   for (let i = weekStart; i < Math.min(weekStart + 7, state.dates.length); i += 1) {
-    state.schedule[state.selected.employeeId][state.dates[i].key] = { shift: source.shift, duties: [...source.duties] };
+    state.schedule[state.selected.employeeId][state.dates[i].key] = { shift: source.shift };
+    changed += 1;
   }
-  render();
+  return changed;
 }
 
 function balanceRest() {
   pushUndo();
+  let changed = 0;
   employees.forEach((employee, rowIndex) => {
     if (employee.locked) return;
     state.dates.forEach((date, colIndex) => {
-      if ((rowIndex + colIndex) % 8 === 6 || (rowIndex + colIndex) % 8 === 7) setCell(employee.id, date.key, "off");
+      if ((rowIndex + colIndex) % 8 === 6 || (rowIndex + colIndex) % 8 === 7) {
+        if (setCell(employee.id, date.key, "off")) changed += 1;
+      }
     });
   });
-  normalizeCoverage();
+  changed += normalizeCoverage();
   render();
+  showToast(`已均衡休息，调整 ${changed} 个单元格`);
 }
 
 function rotateEarlyMiddle() {
   pushUndo();
+  let changed = 0;
   employees.forEach((employee, rowIndex) => {
     if (employee.locked) return;
-    state.dates.forEach((date, colIndex) => {
-      const cell = getCell(employee.id, date.key);
-      if (cell.shift === "early" || cell.shift === "middle") {
-        setCell(employee.id, date.key, Math.floor((date.day - 1) / 7 + rowIndex) % 2 === 0 ? "early" : "middle", true);
+    state.dates.forEach((date) => {
+      const shift = getCell(employee.id, date.key).shift;
+      if (shift === "early" || shift === "middle") {
+        const nextShift = Math.floor((date.day - 1) / 7 + rowIndex) % 2 === 0 ? "early" : "middle";
+        if (setCell(employee.id, date.key, nextShift)) changed += 1;
       }
     });
   });
   render();
+  showToast(`已轮换早中班，调整 ${changed} 个单元格`);
 }
 
 function clearUnlocked() {
   pushUndo();
+  let changed = 0;
   employees.forEach((employee) => {
     if (employee.locked) return;
-    state.dates.forEach((date) => setCell(employee.id, date.key, "off"));
+    state.dates.forEach((date) => {
+      if (setCell(employee.id, date.key, "off")) changed += 1;
+    });
   });
   render();
+  showToast(`已清空未锁定人员，调整 ${changed} 个单元格`);
+}
+
+function editEmployee(employeeId) {
+  const employee = employees.find((item) => item.id === employeeId);
+  if (!employee) return;
+  const nextName = prompt("修改员工姓名", employee.name);
+  if (!nextName || nextName.trim() === employee.name) return;
+  pushUndo();
+  employee.name = nextName.trim();
+  render();
+  showToast("姓名已更新");
+}
+
+function deleteEmployee(employeeId) {
+  const employee = employees.find((item) => item.id === employeeId);
+  if (!employee || !confirm(`确认删除 ${employee.name}？`)) return;
+  pushUndo();
+  employees.splice(employees.indexOf(employee), 1);
+  delete state.schedule[employeeId];
+  render();
+  showToast("人员已删除");
 }
 
 function exportExcel() {
-  const header = ["员工", ...state.dates.map((date) => `${date.day}日 周${date.week}`), "休息天数", "白班时长", "夜班时长", "总上班时长", "均衡提示"];
+  const header = ["员工", ...state.dates.map((date) => `${date.day}日 周${date.week}`), "休息天数", "白班天数", "夜班天数", "上班天数", "均衡提示"];
   const rows = employees.map((employee) => {
     const summary = summaryFor(employee.id);
     return [
       employee.name,
-      ...state.dates.map((date) => {
-        const cell = getCell(employee.id, date.key);
-        const duties = cell.duties.map((duty) => dutyMap[duty].role).join("/");
-        return `${shiftMap[cell.shift].label}${duties ? `(${duties})` : ""}`;
-      }),
-      summary.rest,
-      summary.white,
-      summary.night,
-      summary.total,
+      ...state.dates.map((date) => shiftMap[getCell(employee.id, date.key).shift].label),
+      formatDays(summary.rest),
+      formatDays(summary.white),
+      formatDays(summary.night),
+      formatDays(summary.total),
       summary.balance,
     ];
   });
   const table = [header, ...rows]
-    .map((row) => `<tr>${row.map((cell) => `<td>${String(cell).replace(/&/g, "&amp;").replace(/</g, "&lt;")}</td>`).join("")}</tr>`)
+    .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(String(cell))}</td>`).join("")}</tr>`)
     .join("");
   const blob = new Blob([`<html><meta charset="UTF-8"><table>${table}</table></html>`], { type: "application/vnd.ms-excel;charset=utf-8" });
   const link = document.createElement("a");
@@ -541,6 +605,20 @@ function exportExcel() {
   link.download = "客服排班调整表-2026年7月.xls";
   link.click();
   URL.revokeObjectURL(link.href);
+  showToast("已生成 Excel 导出文件");
+}
+
+function showToast(message) {
+  el.toast.textContent = message;
+  el.toast.hidden = false;
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => {
+    el.toast.hidden = true;
+  }, 2200);
+}
+
+function escapeHtml(value) {
+  return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 }
 
 document.addEventListener("click", () => {
@@ -550,18 +628,18 @@ document.addEventListener("click", () => {
 el.quickEditor.addEventListener("click", (event) => {
   event.stopPropagation();
   const action = event.target.dataset.action;
-  const duty = event.target.dataset.duty;
-  if (!state.selected) return;
+  if (!state.selected || !action) return;
   const employee = employees.find((item) => item.id === state.selected.employeeId);
   if (employee?.locked) return;
   pushUndo();
-  if (action && shiftMap[action]) setCell(state.selected.employeeId, state.selected.dateKey, action);
-  if (action === "copyWeek") copyWeek();
-  if (duty) {
-    const cell = getCell(state.selected.employeeId, state.selected.dateKey);
-    if (cell.shift !== "off" && cell.shift !== "night") {
-      cell.duties = cell.duties.includes(duty) ? cell.duties.filter((item) => item !== duty) : [...cell.duties, duty];
-    }
+  let changed = 0;
+  if (shiftMap[action]) {
+    changed = setCell(state.selected.employeeId, state.selected.dateKey, action) ? 1 : 0;
+    showToast(`已改为${shiftMap[action].label}班`);
+  }
+  if (action === "copyWeek") {
+    changed = copyWeek();
+    showToast(`已复制到本周，调整 ${changed} 个单元格`);
   }
   el.quickEditor.hidden = true;
   render();
@@ -574,39 +652,56 @@ document.getElementById("brushBar").addEventListener("click", (event) => {
   state.swapFrom = null;
   document.querySelectorAll(".brush").forEach((button) => button.classList.remove("active"));
   event.target.classList.add("active");
+  showToast(brush === "none" ? "已切回选择模式" : `已切换到${brush === "swap" ? "交换" : shiftMap[brush].label + "班"}模式`);
 });
 
 document.getElementById("undoBtn").addEventListener("click", () => {
-  const snapshot = state.undo.pop();
-  if (!snapshot) return;
-  state.redo.push(JSON.stringify({ schedule: state.schedule, employees: employees.map((emp) => ({ id: emp.id, locked: emp.locked })) }));
-  restore(snapshot);
+  const data = state.undo.pop();
+  if (!data) {
+    showToast("没有可撤销的调整");
+    return;
+  }
+  state.redo.push(snapshot());
+  restore(data);
+  showToast("已撤销上一步");
 });
 
 document.getElementById("redoBtn").addEventListener("click", () => {
-  const snapshot = state.redo.pop();
-  if (!snapshot) return;
-  state.undo.push(JSON.stringify({ schedule: state.schedule, employees: employees.map((emp) => ({ id: emp.id, locked: emp.locked })) }));
-  restore(snapshot);
+  const data = state.redo.pop();
+  if (!data) {
+    showToast("没有可重做的调整");
+    return;
+  }
+  state.undo.push(snapshot());
+  restore(data);
+  showToast("已重做上一步");
 });
 
 document.getElementById("generateBtn").addEventListener("click", () => {
   pushUndo();
   createInitialSchedule();
   render();
+  showToast(`已重新生成 ${employees.length} 人排班`);
 });
 
-document.getElementById("refreshBtn").addEventListener("click", render);
-document.getElementById("saveBtn").addEventListener("click", () => {
-  localStorage.setItem("customer-service-scheduler", JSON.stringify({ schedule: state.schedule, employees }));
-  document.getElementById("selectionHint").textContent = "草稿已保存在当前浏览器。";
+document.getElementById("refreshBtn").addEventListener("click", () => {
+  const changed = normalizeCoverage();
+  render();
+  showToast(changed ? `刷新成功，自动补齐 ${changed} 处覆盖` : "刷新成功，当前无需自动调整");
 });
+
+document.getElementById("saveBtn").addEventListener("click", () => {
+  localStorage.setItem(storageKey, snapshot());
+  showToast("草稿已保存");
+});
+
 document.getElementById("exportBtn").addEventListener("click", exportExcel);
 document.getElementById("balanceBtn").addEventListener("click", balanceRest);
 document.getElementById("fillCoverageBtn").addEventListener("click", () => {
   pushUndo();
-  normalizeCoverage();
+  const changed = normalizeCoverage();
   render();
+  showToast(changed ? `已补足 ${changed} 处覆盖` : "盯群/护士覆盖已满足");
 });
 document.getElementById("rotateBtn").addEventListener("click", rotateEarlyMiddle);
 document.getElementById("clearUnlockedBtn").addEventListener("click", clearUnlocked);
@@ -615,12 +710,13 @@ document.getElementById("addEmployeeBtn").addEventListener("click", () => {
   if (!name) return;
   pushUndo();
   const id = `e${Date.now()}`;
-  employees.push({ id, name: name.trim(), roles: ["盯群"], night: "可少量", locked: false });
+  employees.push({ id, name: name.trim(), roles: ["盯群"], night: "可排", locked: false });
   state.schedule[id] = {};
   state.dates.forEach((date, index) => {
-    state.schedule[id][date.key] = { shift: index % 6 === 5 ? "off" : "early", duties: ["watch"] };
+    state.schedule[id][date.key] = { shift: index % 6 === 5 ? "off" : "early" };
   });
   render();
+  showToast("人员已添加");
 });
 document.getElementById("monthSelect").addEventListener("change", (event) => {
   pushUndo();
@@ -628,6 +724,7 @@ document.getElementById("monthSelect").addEventListener("change", (event) => {
   createInitialSchedule();
   state.selected = null;
   render();
+  showToast("月份已切换并重新生成排班");
 });
 el.conflictOnly.addEventListener("change", (event) => {
   state.filterConflict = event.target.checked;
@@ -635,19 +732,14 @@ el.conflictOnly.addEventListener("change", (event) => {
 });
 
 createInitialSchedule();
-const saved = localStorage.getItem("customer-service-scheduler");
+const saved = localStorage.getItem(storageKey);
 if (saved) {
   try {
-    const parsed = JSON.parse(saved);
-    state.schedule = parsed.schedule || state.schedule;
-    if (Array.isArray(parsed.employees)) {
-      parsed.employees.forEach((savedEmployee) => {
-        const employee = employees.find((item) => item.id === savedEmployee.id);
-        if (employee) employee.locked = Boolean(savedEmployee.locked);
-      });
-    }
+    restore(saved);
   } catch {
-    localStorage.removeItem("customer-service-scheduler");
+    localStorage.removeItem(storageKey);
+    render();
   }
+} else {
+  render();
 }
-render();

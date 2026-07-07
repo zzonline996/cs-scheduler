@@ -46,29 +46,25 @@
         <aside class="left-panel panel">
           <section>
             <div class="panel-heading">
-              <h2>员工与约束</h2>
+              <h2>人员配置</h2>
               <button class="mini-btn" id="addEmployeeBtn">添加</button>
             </div>
             <div id="employeeList" class="employee-list"></div>
           </section>
 
           <section>
-            <h2>偏好 / 特殊要求</h2>
-            <textarea id="preferenceText" rows="7">夜班优先参考收集意向；已确认不能夜班的人不排晚班。早中班尽量每周轮换，不要让同一个人长期早班。已确认员工锁定后不参与自动重排。</textarea>
-          </section>
-
-          <section>
-            <h2>可见规则</h2>
-            <div id="ruleCards" class="rule-cards"></div>
-          </section>
-
-          <section>
-            <h2>数据来源</h2>
-            <div class="source-links">
-              <a href="https://lifemorefun.feishu.cn/base/HMKVbgpy0aXEWRsKbJtczIlqndc?table=tblYRunCgeDZGD5y&view=vewea6YL5e" target="_blank">夜班意向</a>
-              <a href="https://lifemorefun.feishu.cn/wiki/LA7Qw8YsAi1xyZk9KyccEHSlnqh?sheet=jIwOvD" target="_blank">现有排班</a>
-              <a href="https://lifemorefun.feishu.cn/wiki/NQPHwH8mTidkQokCVvdczoO6nKd" target="_blank">夜班讨论方案</a>
+            <h2>班次时间</h2>
+            <div class="shift-notes">
+              <div><strong>早班</strong><span>08:00 - 16:00</span></div>
+              <div><strong>中班</strong><span>13:00 - 21:00</span></div>
+              <div><strong>夜班</strong><span>21:00 - 次日 08:00，按 1.5 天计</span></div>
+              <div><strong>休息</strong><span>不计入上班天数</span></div>
             </div>
+          </section>
+
+          <section>
+            <h2>排班规则</h2>
+            <div id="ruleCards" class="rule-cards"></div>
           </section>
         </aside>
 
@@ -91,7 +87,6 @@
           <div class="grid-wrap">
             <table id="scheduleTable" class="schedule-table"></table>
           </div>
-          <div id="dailySummary" class="daily-summary"></div>
         </section>
 
         <aside class="right-panel panel">
@@ -128,11 +123,9 @@
         <button data-action="middle">中班</button>
         <button data-action="night">夜班</button>
         <button data-action="off">休息</button>
-        <button data-duty="watch">盯群</button>
-        <button data-duty="nurse">在线护士</button>
-        <button data-duty="convert">转潜</button>
         <button data-action="copyWeek">复制到本周</button>
       </div>
+      <div id="toast" class="toast" hidden></div>
     </div>
     <script src="./app.js"></script>
   </body>
