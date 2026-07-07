@@ -79,7 +79,8 @@ function createInitialSchedule() {
       const cycle = (rowIndex + colIndex) % 8;
       let shift = cycle === 6 || cycle === 7 ? "off" : cycle < 3 ? "early" : "middle";
       if ((rowIndex * 2 + colIndex) % 17 === 0) shift = "night";
-      state.schedule[employee.id][date.key] = { shift, role: defaultRole(employee, shift) };
+      const role = defaultRole(employee, shift);
+      state.schedule[employee.id][date.key] = { shift: role === "转潜" ? "middle" : shift, role };
     });
   });
   normalizeCoverage();
@@ -93,7 +94,7 @@ function normalizeCoverage() {
     if (!workers.some((emp) => getCell(emp.id, date.key).role === "转潜")) {
       const convert = firstUnlockedByRole("转潜", date.key);
       if (convert) {
-        setCell(convert.id, date.key, colIndex % 2 ? "middle" : "early", "转潜");
+        setCell(convert.id, date.key, "middle", "转潜");
         changed += 1;
       }
     }
@@ -142,7 +143,8 @@ function setCell(employeeId, dateKey, shift, role) {
   const employee = employees.find((item) => item.id === employeeId);
   if (!employee || employee.locked) return false;
   if (!state.schedule[employeeId]) state.schedule[employeeId] = {};
-  state.schedule[employeeId][dateKey] = { shift, role: role ?? defaultRole(employee, shift) };
+  const nextRole = role ?? defaultRole(employee, shift);
+  state.schedule[employeeId][dateKey] = { shift: nextRole === "转潜" ? "middle" : shift, role: nextRole };
   return true;
 }
 
@@ -150,7 +152,7 @@ function setCellRole(employeeId, dateKey, role) {
   const employee = employees.find((item) => item.id === employeeId);
   const cell = getCell(employeeId, dateKey);
   if (!employee || employee.locked || cell.shift === "off" || cell.shift === "night" || !hasRole(employee, role)) return false;
-  state.schedule[employeeId][dateKey] = { ...cell, role };
+  state.schedule[employeeId][dateKey] = { ...cell, shift: role === "转潜" ? "middle" : cell.shift, role };
   return true;
 }
 
@@ -183,7 +185,19 @@ function restore(data) {
   const parsed = JSON.parse(data);
   employees.splice(0, employees.length, ...parsed.employees.map((emp) => ({ ...emp, roles: [...emp.roles] })));
   state.schedule = parsed.schedule;
+  enforceShiftRules();
   render();
+}
+
+function enforceShiftRules() {
+  employees.forEach((employee) => {
+    state.dates.forEach((date) => {
+      const cell = getCell(employee.id, date.key);
+      if (cell.role === "转潜" && cell.shift !== "off" && cell.shift !== "night") {
+        state.schedule[employee.id][date.key] = { ...cell, shift: "middle" };
+      }
+    });
+  });
 }
 
 function render() {

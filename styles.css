@@ -369,7 +369,7 @@ button:active {
 
 .shift-notes div {
   display: grid;
-  grid-template-columns: 46px 1fr;
+  grid-template-columns: 118px 1fr;
   gap: 8px;
   padding: 8px 9px;
   border: 1px solid var(--line);
