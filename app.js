@@ -9,7 +9,7 @@ const employees = [
   { id: "e8", name: "郭金炎", roles: ["盯群"], night: "可排", locked: false },
   { id: "e9", name: "唐蓓", roles: ["盯群"], night: "可排", locked: false },
   { id: "e10", name: "朱慧妮", roles: ["盯群"], night: "可排", locked: false },
-  { id: "e11", name: "胡琳佳", roles: ["兼职盯群"], night: "可排", locked: false },
+  { id: "e11", name: "胡琳佳", roles: ["盯群", "转潜"], night: "可排", locked: false },
   { id: "e12", name: "方菲菲", roles: ["盯群"], night: "可排", locked: false },
   { id: "e13", name: "张婉柠", roles: ["转潜"], night: "可排", locked: false },
 ];
@@ -21,7 +21,13 @@ const shiftMap = {
   off: { label: "休", whiteDays: 0, nightDays: 0, workDays: 0 },
 };
 
-const storageKey = "customer-service-scheduler-v2";
+const roleLabels = {
+  盯群: "盯",
+  转潜: "转",
+  在线护士: "护",
+};
+
+const storageKey = "customer-service-scheduler-v3";
 
 const state = {
   dates: makeDates("2026-07"),
@@ -32,6 +38,8 @@ const state = {
   undo: [],
   redo: [],
   filterConflict: false,
+  roleFilter: "all",
+  summaryCollapsed: false,
 };
 
 const el = {
@@ -43,6 +51,8 @@ const el = {
   quickEditor: document.getElementById("quickEditor"),
   conflictOnly: document.getElementById("conflictOnly"),
   toast: document.getElementById("toast"),
+  workspace: document.querySelector(".workspace"),
+  summaryToggleBtn: document.getElementById("summaryToggleBtn"),
 };
 
 function makeDates(month) {
@@ -69,7 +79,7 @@ function createInitialSchedule() {
       const cycle = (rowIndex + colIndex) % 8;
       let shift = cycle === 6 || cycle === 7 ? "off" : cycle < 3 ? "early" : "middle";
       if ((rowIndex * 2 + colIndex) % 17 === 0) shift = "night";
-      state.schedule[employee.id][date.key] = { shift };
+      state.schedule[employee.id][date.key] = { shift, role: defaultRole(employee, shift) };
     });
   });
   normalizeCoverage();
@@ -80,21 +90,21 @@ function normalizeCoverage() {
   state.dates.forEach((date, colIndex) => {
     const workers = employees.filter((emp) => isDayWorker(emp.id, date.key));
 
-    if (!workers.some((emp) => hasRole(emp, "转潜"))) {
+    if (!workers.some((emp) => getCell(emp.id, date.key).role === "转潜")) {
       const convert = firstUnlockedByRole("转潜", date.key);
       if (convert) {
-        setCell(convert.id, date.key, colIndex % 2 ? "middle" : "early");
+        setCell(convert.id, date.key, colIndex % 2 ? "middle" : "early", "转潜");
         changed += 1;
       }
     }
 
-    let support = employees.filter((emp) => isDayWorker(emp.id, date.key) && isSupport(emp)).length;
+    let support = employees.filter((emp) => isDayWorker(emp.id, date.key) && isSupportRole(getCell(emp.id, date.key).role)).length;
     if (support < 3) {
       employees
         .filter((emp) => !emp.locked && isSupport(emp) && getCell(emp.id, date.key).shift === "off")
         .slice(0, 3 - support)
         .forEach((emp, index) => {
-          setCell(emp.id, date.key, index % 2 ? "middle" : "early");
+          setCell(emp.id, date.key, index % 2 ? "middle" : "early", defaultSupportRole(emp));
           changed += 1;
           support += 1;
         });
@@ -108,7 +118,11 @@ function firstUnlockedByRole(role, dateKey) {
 }
 
 function isSupport(employee) {
-  return hasRole(employee, "盯群") || hasRole(employee, "在线护士") || hasRole(employee, "兼职盯群");
+  return hasRole(employee, "盯群") || hasRole(employee, "在线护士");
+}
+
+function isSupportRole(role) {
+  return role === "盯群" || role === "在线护士";
 }
 
 function hasRole(employee, role) {
@@ -121,15 +135,35 @@ function isDayWorker(employeeId, dateKey) {
 }
 
 function getCell(employeeId, dateKey) {
-  return state.schedule[employeeId]?.[dateKey] || { shift: "off" };
+  return state.schedule[employeeId]?.[dateKey] || { shift: "off", role: "" };
 }
 
-function setCell(employeeId, dateKey, shift) {
+function setCell(employeeId, dateKey, shift, role) {
   const employee = employees.find((item) => item.id === employeeId);
   if (!employee || employee.locked) return false;
   if (!state.schedule[employeeId]) state.schedule[employeeId] = {};
-  state.schedule[employeeId][dateKey] = { shift };
+  state.schedule[employeeId][dateKey] = { shift, role: role ?? defaultRole(employee, shift) };
   return true;
+}
+
+function setCellRole(employeeId, dateKey, role) {
+  const employee = employees.find((item) => item.id === employeeId);
+  const cell = getCell(employeeId, dateKey);
+  if (!employee || employee.locked || cell.shift === "off" || cell.shift === "night" || !hasRole(employee, role)) return false;
+  state.schedule[employeeId][dateKey] = { ...cell, role };
+  return true;
+}
+
+function defaultRole(employee, shift) {
+  if (shift === "off" || shift === "night") return "";
+  return defaultSupportRole(employee);
+}
+
+function defaultSupportRole(employee) {
+  if (hasRole(employee, "在线护士")) return "在线护士";
+  if (hasRole(employee, "盯群")) return "盯群";
+  if (hasRole(employee, "转潜")) return "转潜";
+  return "";
 }
 
 function snapshot() {
@@ -157,6 +191,19 @@ function render() {
   renderTable();
   renderChecks();
   renderConfirmations();
+  updateLayoutState();
+}
+
+function updateLayoutState() {
+  el.summaryToggleBtn.textContent = state.summaryCollapsed ? "显示统计" : "隐藏统计";
+  document.querySelectorAll(".filter[data-role-filter]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.roleFilter === state.roleFilter);
+  });
+}
+
+function visibleEmployees() {
+  if (state.roleFilter === "all") return employees;
+  return employees.filter((employee) => hasRole(employee, state.roleFilter));
 }
 
 function renderEmployees() {
@@ -197,20 +244,31 @@ function renderTable() {
   const dayHeaders = state.dates
     .map((date) => `<th class="${date.weekend ? "weekend" : ""}">${date.day}<br><span>周${date.week}</span></th>`)
     .join("");
-  const summaryHeaders = [
-    ["rest", "休息<br>天数"],
-    ["day", "白班<br>天数"],
-    ["night", "夜班<br>天数"],
-    ["total", "上班<br>天数"],
-    ["balance", "均衡<br>提示"],
-  ]
-    .map(([cls, label]) => `<th class="summary-col ${cls}">${label}</th>`)
-    .join("");
+  const summaryHeaders = state.summaryCollapsed
+    ? ""
+    : [
+        ["rest", "休息<br>天数"],
+        ["day", "白班<br>天数"],
+        ["night", "夜班<br>天数"],
+        ["total", "上班<br>天数"],
+        ["balance", "均衡<br>提示"],
+      ]
+        .map(([cls, label]) => `<th class="summary-col ${cls}">${label}</th>`)
+        .join("");
 
-  const body = employees
+  const body = visibleEmployees()
     .map((employee) => {
       const cells = state.dates.map((date) => renderCell(employee, date)).join("");
       const summary = summaryFor(employee.id);
+      const summaryCells = state.summaryCollapsed
+        ? ""
+        : `
+          <td class="summary-cell rest">${formatDays(summary.rest)}</td>
+          <td class="summary-cell day">${formatDays(summary.white)}</td>
+          <td class="summary-cell night">${formatDays(summary.night)}</td>
+          <td class="summary-cell total">${formatDays(summary.total)}</td>
+          <td class="summary-cell balance ${summary.balanceClass}">${summary.balance}</td>
+        `;
       return `
         <tr class="${employee.locked ? "locked-row" : ""}">
           <td class="name-cell">
@@ -218,17 +276,13 @@ function renderTable() {
             <span class="small">${employee.roles.join(" / ")}</span>
           </td>
           ${cells}
-          <td class="summary-cell rest">${formatDays(summary.rest)}</td>
-          <td class="summary-cell day">${formatDays(summary.white)}</td>
-          <td class="summary-cell night">${formatDays(summary.night)}</td>
-          <td class="summary-cell total">${formatDays(summary.total)}</td>
-          <td class="summary-cell balance ${summary.balanceClass}">${summary.balance}</td>
+          ${summaryCells}
         </tr>
       `;
     })
     .join("");
 
-  el.table.innerHTML = `<thead><tr><th class="name-col">员工</th>${dayHeaders}${summaryHeaders}</tr></thead><tbody>${body}</tbody>`;
+  el.table.innerHTML = `<thead><tr><th class="name-col">员工</th>${dayHeaders}${summaryHeaders}</tr></thead><tbody>${body}</tbody>${renderDailyFooter()}`;
   bindCells();
 }
 
@@ -240,10 +294,47 @@ function renderCell(employee, date) {
       tabindex="0"
       data-employee="${employee.id}"
       data-date="${date.key}">
-      <span class="shift-chip ${cell.shift}">${shiftMap[cell.shift].label}</span>
+      <span class="shift-chip ${cell.shift}">${shiftMap[cell.shift].label}${cell.role ? `<em>${roleLabels[cell.role]}</em>` : ""}</span>
       ${warnings.length ? `<span class="warning-mark">!</span>` : ""}
     </td>
   `;
+}
+
+function renderDailyFooter() {
+  const rows = [
+    ["在岗", (date) => dayStats(date.key).working],
+    ["早班", (date) => dayStats(date.key).early],
+    ["中班", (date) => dayStats(date.key).middle],
+    ["夜班", (date) => dayStats(date.key).night],
+    ["休息", (date) => dayStats(date.key).off],
+  ];
+  const summaryFill = state.summaryCollapsed ? "" : `<td class="footer-fill" colspan="5"></td>`;
+  return `
+    <tfoot>
+      ${rows
+        .map(
+          ([label, getValue]) => `
+            <tr>
+              <th class="name-col footer-label">${label}</th>
+              ${state.dates.map((date) => `<td class="footer-cell ${date.weekend ? "weekend" : ""}">${getValue(date)}</td>`).join("")}
+              ${summaryFill}
+            </tr>
+          `,
+        )
+        .join("")}
+    </tfoot>
+  `;
+}
+
+function dayStats(dateKey) {
+  const cells = visibleEmployees().map((employee) => getCell(employee.id, dateKey));
+  return {
+    working: cells.filter((cell) => cell.shift !== "off").length,
+    early: cells.filter((cell) => cell.shift === "early").length,
+    middle: cells.filter((cell) => cell.shift === "middle").length,
+    night: cells.filter((cell) => cell.shift === "night").length,
+    off: cells.filter((cell) => cell.shift === "off").length,
+  };
 }
 
 function bindCells() {
@@ -332,9 +423,9 @@ function formatDays(value) {
 function coverageFor(dateKey) {
   const dayWorkers = employees.filter((emp) => isDayWorker(emp.id, dateKey));
   return {
-    convert: dayWorkers.filter((emp) => hasRole(emp, "转潜")).length,
-    support: dayWorkers.filter((emp) => isSupport(emp)).length,
-    earlySupport: dayWorkers.filter((emp) => getCell(emp.id, dateKey).shift === "early" && isSupport(emp)).length,
+    convert: dayWorkers.filter((emp) => getCell(emp.id, dateKey).role === "转潜").length,
+    support: dayWorkers.filter((emp) => isSupportRole(getCell(emp.id, dateKey).role)).length,
+    earlySupport: dayWorkers.filter((emp) => getCell(emp.id, dateKey).shift === "early" && isSupportRole(getCell(emp.id, dateKey).role)).length,
   };
 }
 
@@ -484,7 +575,7 @@ function fixSupport(dateKey) {
     .filter((emp) => !emp.locked && isSupport(emp) && getCell(emp.id, dateKey).shift === "off")
     .slice(0, Math.max(0, 3 - coverageFor(dateKey).support))
     .forEach((employee, index) => {
-      if (setCell(employee.id, dateKey, index % 2 ? "middle" : "early")) changed += 1;
+      if (setCell(employee.id, dateKey, index % 2 ? "middle" : "early", defaultSupportRole(employee))) changed += 1;
     });
   return changed;
 }
@@ -492,7 +583,7 @@ function fixSupport(dateKey) {
 function fixEarlySupport(dateKey) {
   let changed = 0;
   employees
-    .filter((emp) => !emp.locked && isSupport(emp) && getCell(emp.id, dateKey).shift === "middle")
+    .filter((emp) => !emp.locked && isSupportRole(getCell(emp.id, dateKey).role) && getCell(emp.id, dateKey).shift === "middle")
     .slice(0, Math.max(0, 2 - coverageFor(dateKey).earlySupport))
     .forEach((employee) => {
       if (setCell(employee.id, dateKey, "early")) changed += 1;
@@ -509,7 +600,7 @@ function copyWeek() {
   const source = getCell(state.selected.employeeId, state.selected.dateKey);
   let changed = 0;
   for (let i = weekStart; i < Math.min(weekStart + 7, state.dates.length); i += 1) {
-    state.schedule[state.selected.employeeId][state.dates[i].key] = { shift: source.shift };
+    state.schedule[state.selected.employeeId][state.dates[i].key] = { shift: source.shift, role: source.role };
     changed += 1;
   }
   return changed;
@@ -584,11 +675,14 @@ function deleteEmployee(employeeId) {
 
 function exportExcel() {
   const header = ["员工", ...state.dates.map((date) => `${date.day}日 周${date.week}`), "休息天数", "白班天数", "夜班天数", "上班天数", "均衡提示"];
-  const rows = employees.map((employee) => {
+  const rows = visibleEmployees().map((employee) => {
     const summary = summaryFor(employee.id);
     return [
       employee.name,
-      ...state.dates.map((date) => shiftMap[getCell(employee.id, date.key).shift].label),
+      ...state.dates.map((date) => {
+        const cell = getCell(employee.id, date.key);
+        return `${shiftMap[cell.shift].label}${cell.role ? roleLabels[cell.role] : ""}`;
+      }),
       formatDays(summary.rest),
       formatDays(summary.white),
       formatDays(summary.night),
@@ -628,7 +722,8 @@ document.addEventListener("click", () => {
 el.quickEditor.addEventListener("click", (event) => {
   event.stopPropagation();
   const action = event.target.dataset.action;
-  if (!state.selected || !action) return;
+  const role = event.target.dataset.role;
+  if (!state.selected || (!action && !role)) return;
   const employee = employees.find((item) => item.id === state.selected.employeeId);
   if (employee?.locked) return;
   pushUndo();
@@ -640,6 +735,10 @@ el.quickEditor.addEventListener("click", (event) => {
   if (action === "copyWeek") {
     changed = copyWeek();
     showToast(`已复制到本周，调整 ${changed} 个单元格`);
+  }
+  if (role) {
+    changed = setCellRole(state.selected.employeeId, state.selected.dateKey, role) ? 1 : 0;
+    showToast(changed ? `已切换为${role}` : `${employee.name} 不能排${role}`);
   }
   el.quickEditor.hidden = true;
   render();
@@ -653,6 +752,30 @@ document.getElementById("brushBar").addEventListener("click", (event) => {
   document.querySelectorAll(".brush").forEach((button) => button.classList.remove("active"));
   event.target.classList.add("active");
   showToast(brush === "none" ? "已切回选择模式" : `已切换到${brush === "swap" ? "交换" : shiftMap[brush].label + "班"}模式`);
+});
+
+document.getElementById("roleFilter").addEventListener("click", (event) => {
+  const role = event.target.dataset.roleFilter;
+  if (!role) return;
+  state.roleFilter = role;
+  document.querySelectorAll(".filter[data-role-filter]").forEach((button) => button.classList.remove("active"));
+  event.target.classList.add("active");
+  render();
+  showToast(role === "all" ? "已显示全部人员" : `只看${role}人员`);
+});
+
+document.getElementById("summaryToggleBtn").addEventListener("click", () => {
+  state.summaryCollapsed = !state.summaryCollapsed;
+  render();
+  showToast(state.summaryCollapsed ? "已隐藏右侧统计列" : "已展开右侧统计列");
+});
+
+document.getElementById("leftCollapseBtn").addEventListener("click", () => {
+  el.workspace.classList.toggle("left-collapsed");
+});
+
+document.getElementById("rightCollapseBtn").addEventListener("click", () => {
+  el.workspace.classList.toggle("right-collapsed");
 });
 
 document.getElementById("undoBtn").addEventListener("click", () => {

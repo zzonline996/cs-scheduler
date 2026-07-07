@@ -113,7 +113,8 @@ h2 {
 }
 
 .toolbar,
-.brush-bar {
+.brush-bar,
+.filter-bar {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -148,6 +149,7 @@ h2 {
 .mini-btn,
 .quick-actions button,
 .brush,
+.filter,
 .quick-editor button {
   min-height: 34px;
   border-radius: 8px;
@@ -188,6 +190,18 @@ button:active {
   padding: 12px;
 }
 
+.workspace.left-collapsed {
+  grid-template-columns: 40px minmax(560px, 1fr) 286px;
+}
+
+.workspace.right-collapsed {
+  grid-template-columns: 292px minmax(560px, 1fr) 40px;
+}
+
+.workspace.left-collapsed.right-collapsed {
+  grid-template-columns: 40px minmax(560px, 1fr) 40px;
+}
+
 .panel,
 .schedule-panel {
   min-height: 0;
@@ -200,6 +214,65 @@ button:active {
 .right-panel {
   overflow: auto;
   padding: 14px;
+  position: relative;
+}
+
+.panel-collapse {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 26px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.left-collapse {
+  float: right;
+  margin: -4px -4px 8px 8px;
+}
+
+.right-collapse {
+  float: left;
+  margin: -4px 8px 8px -4px;
+}
+
+.workspace.left-collapsed .left-panel,
+.workspace.right-collapsed .right-panel {
+  padding: 8px 6px;
+  overflow: hidden;
+}
+
+.workspace.left-collapsed .left-panel section,
+.workspace.right-collapsed .right-panel section {
+  display: none;
+}
+
+.workspace.left-collapsed .left-collapse,
+.workspace.right-collapsed .right-collapse {
+  float: none;
+  margin: 0 auto;
+}
+
+.workspace.left-collapsed .left-collapse,
+.workspace.right-collapsed .right-collapse {
+  font-size: 0;
+}
+
+.workspace.left-collapsed .left-collapse::before {
+  content: "›";
+  font-size: 18px;
+}
+
+.workspace.right-collapsed .right-collapse::before {
+  content: "‹";
+  font-size: 18px;
 }
 
 .left-panel section + section,
@@ -372,7 +445,18 @@ button:active {
   font-size: 12px;
 }
 
-.brush.active {
+.filter-bar {
+  margin-left: auto;
+}
+
+.filter {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.brush.active,
+.filter.active {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
@@ -514,8 +598,17 @@ button:active {
   justify-content: center;
   min-width: 30px;
   height: 22px;
+  gap: 3px;
+  padding: 0 6px;
   border-radius: 6px;
   font-weight: 700;
+}
+
+.shift-chip em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.82;
 }
 
 .shift-early .shift-chip,
@@ -554,6 +647,38 @@ button:active {
   color: #233138;
   font-weight: 700;
   text-align: center;
+}
+
+.schedule-table tfoot th,
+.schedule-table tfoot td {
+  height: 30px;
+  background: #f8fafb;
+  color: #52636b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.schedule-table tfoot .footer-label {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  text-align: left;
+  background: #eef3f4;
+}
+
+.schedule-table tfoot .footer-cell {
+  text-align: center;
+}
+
+.schedule-table tfoot .footer-cell.weekend {
+  background: #fff6e5;
+}
+
+.schedule-table tfoot .footer-fill {
+  position: sticky;
+  right: 0;
+  z-index: 4;
+  background: #eef3f4;
 }
 
 .balance-ok {

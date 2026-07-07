@@ -44,6 +44,7 @@
 
       <main class="workspace">
         <aside class="left-panel panel">
+          <button class="panel-collapse left-collapse" id="leftCollapseBtn" title="折叠左侧">‹</button>
           <section>
             <div class="panel-heading">
               <h2>人员配置</h2>
@@ -74,6 +75,13 @@
               <h2>7 月排班表</h2>
               <p id="selectionHint">点击单元格修改；开启刷子后可拖动批量填充。</p>
             </div>
+            <div class="filter-bar" id="roleFilter">
+              <button data-role-filter="all" class="filter active">全部</button>
+              <button data-role-filter="盯群" class="filter">盯群</button>
+              <button data-role-filter="转潜" class="filter">转潜</button>
+              <button data-role-filter="在线护士" class="filter">护士</button>
+              <button id="summaryToggleBtn" class="filter" type="button">隐藏统计</button>
+            </div>
             <div class="brush-bar" id="brushBar">
               <button data-brush="none" class="brush active">选择</button>
               <button data-brush="early" class="brush shift-early">早班</button>
@@ -90,6 +98,7 @@
         </section>
 
         <aside class="right-panel panel">
+          <button class="panel-collapse right-collapse" id="rightCollapseBtn" title="折叠右侧">›</button>
           <section>
             <div class="panel-heading">
               <h2>操作检查</h2>
@@ -123,6 +132,9 @@
         <button data-action="middle">中班</button>
         <button data-action="night">夜班</button>
         <button data-action="off">休息</button>
+        <button data-role="盯群">盯群</button>
+        <button data-role="转潜">转潜</button>
+        <button data-role="在线护士">护士</button>
         <button data-action="copyWeek">复制到本周</button>
       </div>
       <div id="toast" class="toast" hidden></div>
