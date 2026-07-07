@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>客服排班调整工作台</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">排</div>
+          <div>
+            <h1>客服排班调整工作台</h1>
+            <p>先生成，再微调，最后确认导出</p>
+          </div>
+        </div>
+        <div class="toolbar">
+          <label class="select-field">
+            <span>月份</span>
+            <select id="monthSelect">
+              <option value="2026-07">2026 年 7 月</option>
+              <option value="2026-08">2026 年 8 月</option>
+            </select>
+          </label>
+          <label class="select-field">
+            <span>版本</span>
+            <select id="versionSelect">
+              <option>草稿 v1</option>
+              <option>夜班意向优先版</option>
+              <option>主管微调版</option>
+            </select>
+          </label>
+          <button class="icon-btn" id="undoBtn" title="撤销">↶</button>
+          <button class="icon-btn" id="redoBtn" title="重做">↷</button>
+          <button class="secondary-btn" id="refreshBtn">刷新</button>
+          <button class="primary-btn" id="generateBtn">生成排班</button>
+          <button class="secondary-btn" id="saveBtn">保存草稿</button>
+          <button class="secondary-btn" id="exportBtn">导出 Excel</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="left-panel panel">
+          <section>
+            <div class="panel-heading">
+              <h2>员工与约束</h2>
+              <button class="mini-btn" id="addEmployeeBtn">添加</button>
+            </div>
+            <div id="employeeList" class="employee-list"></div>
+          </section>
+
+          <section>
+            <h2>偏好 / 特殊要求</h2>
+            <textarea id="preferenceText" rows="7">夜班优先参考收集意向；已确认不能夜班的人不排晚班。早中班尽量每周轮换，不要让同一个人长期早班。已确认员工锁定后不参与自动重排。</textarea>
+          </section>
+
+          <section>
+            <h2>可见规则</h2>
+            <div id="ruleCards" class="rule-cards"></div>
+          </section>
+
+          <section>
+            <h2>数据来源</h2>
+            <div class="source-links">
+              <a href="https://lifemorefun.feishu.cn/base/HMKVbgpy0aXEWRsKbJtczIlqndc?table=tblYRunCgeDZGD5y&view=vewea6YL5e" target="_blank">夜班意向</a>
+              <a href="https://lifemorefun.feishu.cn/wiki/LA7Qw8YsAi1xyZk9KyccEHSlnqh?sheet=jIwOvD" target="_blank">现有排班</a>
+              <a href="https://lifemorefun.feishu.cn/wiki/NQPHwH8mTidkQokCVvdczoO6nKd" target="_blank">夜班讨论方案</a>
+            </div>
+          </section>
+        </aside>
+
+        <section class="schedule-panel">
+          <div class="schedule-tools">
+            <div>
+              <h2>7 月排班表</h2>
+              <p id="selectionHint">点击单元格修改；开启刷子后可拖动批量填充。</p>
+            </div>
+            <div class="brush-bar" id="brushBar">
+              <button data-brush="none" class="brush active">选择</button>
+              <button data-brush="early" class="brush shift-early">早班</button>
+              <button data-brush="middle" class="brush shift-middle">中班</button>
+              <button data-brush="night" class="brush shift-night">夜班</button>
+              <button data-brush="off" class="brush shift-off">休息</button>
+              <button data-brush="swap" class="brush">交换</button>
+            </div>
+          </div>
+
+          <div class="grid-wrap">
+            <table id="scheduleTable" class="schedule-table"></table>
+          </div>
+          <div id="dailySummary" class="daily-summary"></div>
+        </section>
+
+        <aside class="right-panel panel">
+          <section>
+            <div class="panel-heading">
+              <h2>操作检查</h2>
+              <label class="toggle">
+                <input id="conflictOnly" type="checkbox" />
+                <span>只看冲突</span>
+              </label>
+            </div>
+            <div id="conflictList" class="conflict-list"></div>
+          </section>
+
+          <section>
+            <h2>快速调整</h2>
+            <div class="quick-actions">
+              <button id="balanceBtn">均衡休息</button>
+              <button id="fillCoverageBtn">补足盯群/护士</button>
+              <button id="rotateBtn">早中班轮换</button>
+              <button id="clearUnlockedBtn">清空未锁定</button>
+            </div>
+          </section>
+
+          <section>
+            <h2>员工确认</h2>
+            <div id="confirmList" class="confirm-list"></div>
+          </section>
+        </aside>
+      </main>
+
+      <div id="quickEditor" class="quick-editor" hidden>
+        <button data-action="early">早班</button>
+        <button data-action="middle">中班</button>
+        <button data-action="night">夜班</button>
+        <button data-action="off">休息</button>
+        <button data-duty="watch">盯群</button>
+        <button data-duty="nurse">在线护士</button>
+        <button data-duty="convert">转潜</button>
+        <button data-action="copyWeek">复制到本周</button>
+      </div>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>
