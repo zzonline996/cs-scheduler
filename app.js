@@ -635,7 +635,7 @@ function renderEmployees() {
                 </select>
               </label>
               <label>
-                <span>夜班</span>
+                <span>夜班数量</span>
                 <select data-night-target="${employee.id}" aria-label="设置${escapeHtml(employee.name)}夜班天数">
                   ${Array.from({ length: 11 }, (_, index) => `<option value="${index}" ${employee.nightTarget === index ? "selected" : ""}>${index} 天</option>`).join("")}
                 </select>
