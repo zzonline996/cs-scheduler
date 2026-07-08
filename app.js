@@ -17,7 +17,7 @@ const employees = [
 const shiftMap = {
   early: { label: "早", whiteDays: 1, nightDays: 0, workDays: 1 },
   middle: { label: "中", whiteDays: 1, nightDays: 0, workDays: 1 },
-  night: { label: "夜", whiteDays: 0, nightDays: 1.5, workDays: 1.5 },
+  night: { label: "夜", whiteDays: 0, nightDays: 1, workDays: 1 },
   off: { label: "休", whiteDays: 0, nightDays: 0, workDays: 0 },
 };
 
@@ -179,7 +179,7 @@ function nightStartIndexes(nightTarget, rowIndex, blockSize) {
 }
 
 function balanceMonthlyRest(employee, rowIndex) {
-  let restCount = summaryFor(employee.id).rest;
+  let restCount = summaryFor(employee.id).actualRest;
   for (let i = (rowIndex + 2) % 6; restCount < 6 && i < state.dates.length; i += 6) {
     const date = state.dates[i];
     const cell = getCell(employee.id, date.key);
@@ -230,7 +230,7 @@ function chooseNightCandidate(dateIndex, adjustableIds) {
     .sort((a, b) => {
       const aGap = nightCountFor(a.id) - Number(a.nightTarget || 0);
       const bGap = nightCountFor(b.id) - Number(b.nightTarget || 0);
-      return aGap - bGap || summaryFor(b.id).rest - summaryFor(a.id).rest;
+      return aGap - bGap || summaryFor(b.id).actualRest - summaryFor(a.id).actualRest;
     })[0];
 }
 
@@ -750,10 +750,10 @@ function renderTable() {
       const summaryCells = state.summaryCollapsed
         ? ""
         : `
-          <td class="summary-cell rest">${formatDays(summary.rest)}</td>
-          <td class="summary-cell day">${formatDays(summary.white)}</td>
-          <td class="summary-cell night">${formatDays(summary.night)}</td>
-          <td class="summary-cell total">${formatDays(summary.total)}</td>
+          <td class="summary-cell rest" title="${summaryRestTitle(summary)}">${formatDays(summary.rest)}</td>
+          <td class="summary-cell day" title="白班天数已扣除夜班补休折算：实际早中班天数 - 夜班次数 × 0.5。">${formatDays(summary.white)}</td>
+          <td class="summary-cell night" title="夜班天数按夜班次数计算，1 个夜班 = 1 天。">${formatDays(summary.night)}</td>
+          <td class="summary-cell total" title="上班天数 = 白班天数 + 夜班天数。">${formatDays(summary.total)}</td>
           <td class="summary-cell balance ${summary.balanceClass}" title="${balanceTitle(summary)}">${summary.balance}</td>
         `;
       return `
@@ -939,24 +939,43 @@ function quickEditorSection(title, role, shifts) {
 
 function summaryFor(employeeId) {
   const entries = Object.values(state.schedule[employeeId] || {});
-  const rest = entries.filter((cell) => cell.shift === "off").length;
-  const white = entries.reduce((sum, cell) => sum + shiftMap[cell.shift].whiteDays, 0);
+  const actualRest = entries.filter((cell) => cell.shift === "off").length;
+  const actualWhite = entries.reduce((sum, cell) => sum + shiftMap[cell.shift].whiteDays, 0);
   const night = entries.reduce((sum, cell) => sum + shiftMap[cell.shift].nightDays, 0);
+  const nightRestCredit = night * 0.5;
+  const rest = actualRest + nightRestCredit;
+  const white = Math.max(0, actualWhite - nightRestCredit);
   const total = white + night;
-  const allTotals = employees.map((employee) =>
-    Object.values(state.schedule[employee.id] || {}).reduce((sum, cell) => sum + shiftMap[cell.shift].workDays, 0),
-  );
+  const allTotals = employees.map((employee) => {
+    const item = summaryParts(employee.id);
+    return item.white + item.night;
+  });
   const avg = allTotals.reduce((sum, value) => sum + value, 0) / allTotals.length || total;
   const diff = total - avg;
-  if (Math.abs(diff) <= 1.5) return { rest, white, night, total, balance: "均衡", balanceClass: "balance-ok" };
-  if (diff > 1.5) return { rest, white, night, total, balance: `偏高${formatDays(diff)}`, balanceClass: "balance-warn" };
-  return { rest, white, night, total, balance: `偏低${formatDays(Math.abs(diff))}`, balanceClass: "balance-bad" };
+  if (Math.abs(diff) <= 1.5) return { actualRest, rest, white, night, total, balance: "均衡", balanceClass: "balance-ok" };
+  if (diff > 1.5) return { actualRest, rest, white, night, total, balance: `偏高${formatDays(diff)}`, balanceClass: "balance-warn" };
+  return { actualRest, rest, white, night, total, balance: `偏低${formatDays(Math.abs(diff))}`, balanceClass: "balance-bad" };
+}
+
+function summaryParts(employeeId) {
+  const entries = Object.values(state.schedule[employeeId] || {});
+  const actualRest = entries.filter((cell) => cell.shift === "off").length;
+  const actualWhite = entries.reduce((sum, cell) => sum + shiftMap[cell.shift].whiteDays, 0);
+  const night = entries.reduce((sum, cell) => sum + shiftMap[cell.shift].nightDays, 0);
+  const rest = actualRest + night * 0.5;
+  const white = Math.max(0, actualWhite - night * 0.5);
+  return { actualRest, rest, white, night };
 }
 
 function balanceTitle(summary) {
   if (summary.balanceClass === "balance-ok") return "该员工总上班天数与全员平均值接近，差异在 1.5 天以内。";
   if (summary.balanceClass === "balance-warn") return `该员工总上班天数比全员平均值多 ${summary.balance.replace("偏高", "")} 天。`;
   return `该员工总上班天数比全员平均值少 ${summary.balance.replace("偏低", "")} 天。`;
+}
+
+function summaryRestTitle(summary) {
+  const credit = summary.night * 0.5;
+  return `休息天数 = 基础实际休息 ${formatDays(summary.actualRest)} 天 + 夜班补休 ${formatDays(credit)} 天。每个夜班增加 0.5 天休息。`;
 }
 
 function formatDays(value) {
@@ -1063,12 +1082,12 @@ function allConflicts() {
   });
 
   employees.forEach((employee) => {
-    const rest = summaryFor(employee.id).rest;
+    const rest = summaryFor(employee.id).actualRest;
     if (rest !== 6) {
       conflicts.push({
         level: "bad",
-        title: `${employee.name} 休息天数异常`,
-        desc: `当前休息 ${formatDays(rest)} 天，基础规则是每月固定 6 天。`,
+        title: `${employee.name} 基础休息异常`,
+        desc: `当前实际休息 ${formatDays(rest)} 天，基础规则是每月固定 6 天；汇总里的休息天数会额外加夜班补休。`,
         action: () => {
           enforceExactRestDays([employee]);
           enforceDailyNightCoverage([employee]);
@@ -1098,10 +1117,10 @@ function renderChecks() {
     early: conflicts.some((item) => item.title.includes("早班覆盖")),
     nightRecovery: conflicts.some((item) => item.desc.includes("夜班后") || item.desc.includes("连续夜班")),
     nightDaily: conflicts.some((item) => item.title.includes("夜班人数")),
-    restFixed: conflicts.some((item) => item.title.includes("休息天数异常")),
+    restFixed: conflicts.some((item) => item.title.includes("基础休息异常")),
   };
   const cards = [
-    ["休息固定6天", ruleStatus.restFixed ? "需处理" : "已满足", ruleStatus.restFixed ? "bad" : ""],
+    ["基础休息6天", ruleStatus.restFixed ? "需处理" : "已满足", ruleStatus.restFixed ? "bad" : ""],
     ["每天夜班1人", ruleStatus.nightDaily ? "需处理" : "已满足", ruleStatus.nightDaily ? "bad" : ""],
     ["连续上班≤7天", ruleStatus.continuous ? "需处理" : "已满足", ruleStatus.continuous ? "bad" : ""],
     ["早中班按周连续", "同一员工一周内尽量连续早班或连续中班", ""],
