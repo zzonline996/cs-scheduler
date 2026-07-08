@@ -184,7 +184,7 @@ button:active {
 .workspace {
   min-height: 0;
   display: grid;
-  grid-template-columns: 292px minmax(560px, 1fr) 286px;
+  grid-template-columns: 340px minmax(560px, 1fr) 286px;
   gap: 12px;
   padding: 12px;
 }
@@ -194,7 +194,7 @@ button:active {
 }
 
 .workspace.right-collapsed {
-  grid-template-columns: 292px minmax(560px, 1fr) 40px;
+  grid-template-columns: 340px minmax(560px, 1fr) 40px;
 }
 
 .workspace.left-collapsed.right-collapsed {
@@ -288,19 +288,19 @@ button:active {
 }
 
 .employee-list {
-  margin-top: 8px;
+  margin-top: 10px;
   display: grid;
-  gap: 6px;
+  gap: 10px;
 }
 
 .employee-card {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 7px;
-  padding: 7px;
+  gap: 10px;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fbfcfc;
+  background: #fff;
 }
 
 .employee-title {
@@ -320,28 +320,32 @@ button:active {
 }
 
 .employee-config-grid {
-  margin-top: 5px;
+  margin-top: 9px;
   display: grid;
-  grid-template-columns: 1fr 72px 78px;
-  gap: 5px;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .employee-config-grid label {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
+}
+
+.employee-config-grid label:first-child {
+  grid-column: 1 / -1;
 }
 
 .employee-config-grid select {
   width: 100%;
-  min-height: 26px;
+  min-height: 32px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: #fff;
   color: #263840;
-  font-size: 11px;
-  padding: 0 5px;
+  font-size: 12px;
+  padding: 0 8px;
 }
 
 .employee-actions {
@@ -351,7 +355,7 @@ button:active {
 }
 
 .employee-actions button {
-  min-height: 25px;
+  min-height: 28px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
