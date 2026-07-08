@@ -113,7 +113,6 @@ h2 {
 }
 
 .toolbar,
-.brush-bar,
 .filter-bar {
   display: flex;
   align-items: center;
@@ -277,7 +276,7 @@ button:active {
 
 .left-panel section + section,
 .right-panel section + section {
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
 .panel-heading,
@@ -289,39 +288,70 @@ button:active {
 }
 
 .employee-list {
-  margin-top: 10px;
+  margin-top: 8px;
   display: grid;
-  gap: 7px;
+  gap: 6px;
 }
 
 .employee-card {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 8px;
-  padding: 9px;
+  gap: 7px;
+  padding: 7px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fbfcfc;
 }
 
-.employee-card strong {
+.employee-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.employee-title strong {
   font-size: 13px;
 }
 
-.employee-card p {
-  margin-top: 4px;
+.employee-title span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
+}
+
+.employee-config-grid {
+  margin-top: 5px;
+  display: grid;
+  grid-template-columns: 1fr 72px 78px;
+  gap: 5px;
+}
+
+.employee-config-grid label {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.employee-config-grid select {
+  width: 100%;
+  min-height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: #263840;
+  font-size: 11px;
+  padding: 0 5px;
 }
 
 .employee-actions {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   align-content: start;
 }
 
 .employee-actions button {
-  min-height: 26px;
+  min-height: 25px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -331,15 +361,7 @@ button:active {
 }
 
 .role-select {
-  width: 100%;
-  margin-top: 7px;
-  min-height: 30px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-  color: #263840;
-  font-size: 12px;
-  padding: 0 8px;
+  margin: 0;
 }
 
 .tag-row {
@@ -449,6 +471,40 @@ button:active {
 .schedule-tools {
   padding: 14px;
   border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.brush-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: nowrap;
+  padding: 7px 9px;
+  border: 1px solid #b9ded9;
+  border-radius: 8px;
+  background: #eefaf8;
+  color: #3b565c;
+  font-size: 12px;
+}
+
+.bar-divider {
+  width: 1px;
+  height: 22px;
+  background: #b9d6d2;
+}
+
+.help-dot {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #9ecbc5;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0;
 }
 
 .brush {
@@ -537,6 +593,15 @@ button:active {
   z-index: 4;
   min-width: 82px;
   background: #fbfcfc;
+}
+
+.schedule-table tbody tr:hover td,
+.schedule-table tbody tr:hover .name-cell {
+  background: #f0faf8;
+}
+
+.schedule-table tbody tr:hover td.weekend {
+  background: #fff1cf;
 }
 
 .schedule-table td.weekend {
@@ -791,11 +856,10 @@ button:active {
 .quick-editor {
   position: fixed;
   z-index: 30;
-  width: 268px;
+  width: 286px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  padding: 8px;
+  gap: 8px;
+  padding: 10px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: #fff;
@@ -829,6 +893,24 @@ button:active {
   min-height: 36px;
   padding: 0 8px;
   font-size: 12px;
+}
+
+.quick-editor-section + .quick-editor-section {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.quick-editor-section strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #31444c;
+  font-size: 12px;
+}
+
+.quick-editor-section div {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
 }
 
 @media (max-width: 1180px) {
