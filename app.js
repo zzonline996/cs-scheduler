@@ -1480,15 +1480,6 @@ document.getElementById("generateBtn").addEventListener("click", () => {
 });
 
 document.getElementById("exportBtn").addEventListener("click", exportExcel);
-document.getElementById("balanceBtn").addEventListener("click", balanceRest);
-document.getElementById("fillCoverageBtn").addEventListener("click", () => {
-  pushUndo();
-  const changed = normalizeCoverage();
-  render();
-  showToast(changed ? `已补足 ${changed} 处覆盖` : "盯群/护士覆盖已满足");
-});
-document.getElementById("rotateBtn").addEventListener("click", rotateEarlyMiddle);
-document.getElementById("clearUnlockedBtn").addEventListener("click", clearUnlocked);
 document.getElementById("addEmployeeBtn").addEventListener("click", () => {
   const name = prompt("请输入员工姓名");
   if (!name) return;

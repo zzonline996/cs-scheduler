@@ -146,7 +146,6 @@ h2 {
 .secondary-btn,
 .icon-btn,
 .mini-btn,
-.quick-actions button,
 .brush,
 .filter,
 .quick-editor button {
@@ -833,19 +832,6 @@ button:active {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
-  padding: 0 8px;
-  font-size: 12px;
-}
-
-.quick-actions {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.quick-actions button {
-  min-height: 38px;
   padding: 0 8px;
   font-size: 12px;
 }
