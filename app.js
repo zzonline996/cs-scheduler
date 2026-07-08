@@ -44,7 +44,7 @@ const state = {
   undo: [],
   redo: [],
   filterConflict: false,
-  roleFilter: "all",
+  roleFilters: [],
   summaryCollapsed: false,
 };
 
@@ -605,13 +605,21 @@ function render() {
 function updateLayoutState() {
   el.summaryToggleBtn.textContent = state.summaryCollapsed ? "显示统计" : "隐藏统计";
   document.querySelectorAll(".filter[data-role-filter]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.roleFilter === state.roleFilter);
+    const role = button.dataset.roleFilter;
+    button.classList.toggle("active", role === "all" ? state.roleFilters.length === 0 : state.roleFilters.includes(role));
   });
 }
 
 function visibleEmployees() {
-  if (state.roleFilter === "all") return employees;
-  return employees.filter((employee) => hasRole(employee, state.roleFilter));
+  const visible = state.roleFilters.length === 0 ? employees : employees.filter((employee) => state.roleFilters.some((role) => hasRole(employee, role)));
+  return [...visible].sort((a, b) => roleSortWeight(a) - roleSortWeight(b) || employees.indexOf(a) - employees.indexOf(b));
+}
+
+function roleSortWeight(employee) {
+  if (hasRole(employee, "在线护士")) return 0;
+  if (hasRole(employee, "盯群")) return 1;
+  if (hasRole(employee, "转潜")) return 2;
+  return 3;
 }
 
 function renderEmployees() {
@@ -1262,7 +1270,7 @@ function clearVisibleSchedule() {
     return;
   }
 
-  const scope = state.roleFilter === "all" ? "当前显示的全部人员" : `当前筛选显示的${state.roleFilter}人员`;
+  const scope = state.roleFilters.length === 0 ? "当前显示的全部人员" : `当前筛选显示的${state.roleFilters.join("、")}人员`;
   const message = [
     `确认清空${scope}的排班吗？`,
     "",
@@ -1390,11 +1398,15 @@ document.getElementById("clearVisibleBtn").addEventListener("click", (event) => 
 document.getElementById("roleFilter").addEventListener("click", (event) => {
   const role = event.target.dataset.roleFilter;
   if (!role) return;
-  state.roleFilter = role;
-  document.querySelectorAll(".filter[data-role-filter]").forEach((button) => button.classList.remove("active"));
-  event.target.classList.add("active");
+  if (role === "all") {
+    state.roleFilters = [];
+  } else if (state.roleFilters.includes(role)) {
+    state.roleFilters = state.roleFilters.filter((item) => item !== role);
+  } else {
+    state.roleFilters = [...state.roleFilters, role];
+  }
   render();
-  showToast(role === "all" ? "已显示全部人员" : `只看${role}人员`);
+  showToast(state.roleFilters.length === 0 ? "已显示全部人员" : `已筛选：${state.roleFilters.join("、")}`);
 });
 
 document.getElementById("summaryToggleBtn").addEventListener("click", () => {
