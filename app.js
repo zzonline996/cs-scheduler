@@ -791,9 +791,12 @@ function renderDailyFooter() {
   const rows = [
     ["早班", (date) => dayStats(date.key).early],
     ["中班", (date) => dayStats(date.key).middle],
-    ["夜班", (date) => dayStats(date.key).night],
     ["休息", (date) => dayStats(date.key).off],
-    ["在岗", (date) => dayStats(date.key).working],
+    ["白天在岗", (date) => dayStats(date.key).dayWorking],
+    ["转潜", (date) => dayStats(date.key).transfer],
+    ["盯群", (date) => dayStats(date.key).watch],
+    ["护士", (date) => dayStats(date.key).nurse],
+    ["夜班", (date) => dayStats(date.key).night],
   ];
   const summaryFill = state.summaryCollapsed ? "" : `<td class="footer-fill" colspan="5"></td>`;
   return `
@@ -815,12 +818,16 @@ function renderDailyFooter() {
 
 function dayStats(dateKey) {
   const cells = visibleEmployees().map((employee) => getCell(employee.id, dateKey));
+  const dayCells = cells.filter((cell) => cell.shift !== "off" && cell.shift !== "night");
   return {
-    working: cells.filter((cell) => cell.shift !== "off").length,
+    dayWorking: dayCells.length,
     early: cells.filter((cell) => cell.shift === "early").length,
     middle: cells.filter((cell) => cell.shift === "middle").length,
     night: cells.filter((cell) => cell.shift === "night").length,
     off: cells.filter((cell) => cell.shift === "off").length,
+    transfer: dayCells.filter((cell) => cell.role === "转潜").length,
+    watch: dayCells.filter((cell) => cell.role === "盯群").length,
+    nurse: dayCells.filter((cell) => cell.role === "在线护士").length,
   };
 }
 
