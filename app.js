@@ -27,6 +27,13 @@ const roleLabels = {
   在线护士: "护",
 };
 
+const exportShiftLabels = {
+  early: "早班",
+  middle: "中班",
+  night: "夜班",
+  off: "休息",
+};
+
 const rolePresets = [
   { value: "在线护士", label: "在线护士", roles: ["在线护士"] },
   { value: "盯群", label: "盯群", roles: ["盯群"] },
@@ -1347,14 +1354,14 @@ function deleteEmployee(employeeId) {
 }
 
 function exportExcel() {
-  const header = ["员工", ...state.dates.map((date) => `${date.day}日 周${date.week}`), "休息天数", "白班天数", "夜班天数", "上班天数", "均衡提示"];
-  const rows = visibleEmployees().map((employee) => {
+  const header = ["姓名", ...state.dates.map(exportDateHeader), "休息天数", "白班天数", "夜班天数", "上班天数", "均衡提示"];
+  const rows = orderedEmployeesForExport().map((employee) => {
     const summary = summaryFor(employee.id);
     return [
       employee.name,
       ...state.dates.map((date) => {
         const cell = getCell(employee.id, date.key);
-        return `${shiftMap[cell.shift].label}${cell.role ? roleLabels[cell.role] : ""}`;
+        return exportShiftLabels[cell.shift] || "";
       }),
       formatDays(summary.rest),
       formatDays(summary.white),
@@ -1364,15 +1371,39 @@ function exportExcel() {
     ];
   });
   const table = [header, ...rows]
-    .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(String(cell))}</td>`).join("")}</tr>`)
+    .map((row, rowIndex) => `<tr>${row.map((cell) => `<td class="${rowIndex === 0 ? "header" : ""}">${escapeHtml(String(cell))}</td>`).join("")}</tr>`)
     .join("");
-  const blob = new Blob([`<html><meta charset="UTF-8"><table>${table}</table></html>`], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const blob = new Blob(
+    [
+      `<html>
+        <head>
+          <meta charset="UTF-8" />
+          <style>
+            table { border-collapse: collapse; font-family: "Microsoft YaHei", Arial, sans-serif; }
+            td { border: 1px solid #d9d9d9; padding: 6px 10px; text-align: center; mso-number-format: "\\@"; white-space: pre-line; }
+            td:first-child { text-align: left; min-width: 86px; }
+            .header { background: #f2f3f5; font-weight: 700; }
+          </style>
+        </head>
+        <body><table>${table}</table></body>
+      </html>`,
+    ],
+    { type: "application/vnd.ms-excel;charset=utf-8" },
+  );
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "客服排班调整表-2026年7月.xls";
+  link.download = `客服排班表-${state.dates[0].key.slice(0, 7)}.xls`;
   link.click();
   URL.revokeObjectURL(link.href);
-  showToast("已生成 Excel 导出文件");
+  showToast("已导出全部人员，班次文案已按模板格式生成");
+}
+
+function orderedEmployeesForExport() {
+  return [...employees].sort((a, b) => roleSortWeight(a) - roleSortWeight(b) || employees.indexOf(a) - employees.indexOf(b));
+}
+
+function exportDateHeader(date) {
+  return `${date.day}日\n周${date.week}`;
 }
 
 function showToast(message) {
