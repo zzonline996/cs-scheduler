@@ -534,6 +534,15 @@ button:active {
   color: #fff;
 }
 
+.danger-action {
+  border-color: #f0b8ae;
+  color: var(--danger);
+}
+
+.danger-action:hover {
+  background: var(--danger-weak);
+}
+
 .grid-wrap {
   min-height: 0;
   overflow: auto;

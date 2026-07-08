@@ -1249,6 +1249,48 @@ function clearUnlocked() {
   showToast(`已清空未锁定人员，调整 ${changed} 个单元格`);
 }
 
+function clearVisibleSchedule() {
+  const visible = visibleEmployees();
+  const unlocked = visible.filter((employee) => !employee.locked);
+  const locked = visible.filter((employee) => employee.locked);
+  if (!visible.length) {
+    showToast("当前筛选没有可清空的人员");
+    return;
+  }
+  if (!unlocked.length) {
+    alert(`当前筛选显示的人员都已锁定，不能清空。\n\n需要先在右侧员工确认里解锁后再清空。`);
+    return;
+  }
+
+  const scope = state.roleFilter === "all" ? "当前显示的全部人员" : `当前筛选显示的${state.roleFilter}人员`;
+  const message = [
+    `确认清空${scope}的排班吗？`,
+    "",
+    `将被清空：${unlocked.map((employee) => employee.name).join("、")}`,
+    locked.length ? `不会清空（已锁定，需要先解锁）：${locked.map((employee) => employee.name).join("、")}` : "不会清空：无",
+    "",
+    "清空后这些人员本月所有日期都会变为“休”。未显示在当前筛选里的人员不会变化。",
+  ].join("\n");
+
+  if (!confirm(message)) return;
+  pushUndo();
+  let changed = 0;
+  unlocked.forEach((employee) => {
+    state.dates.forEach((date) => {
+      const cell = getCell(employee.id, date.key);
+      if (cell.shift !== "off" || cell.role) {
+        state.schedule[employee.id][date.key] = { shift: "off", role: "" };
+        changed += 1;
+      }
+    });
+  });
+  state.selected = null;
+  state.brush = "none";
+  state.swapFrom = null;
+  render();
+  showToast(`已清空 ${unlocked.length} 人，调整 ${changed} 个单元格`);
+}
+
 function editEmployee(employeeId) {
   const employee = employees.find((item) => item.id === employeeId);
   if (!employee) return;
@@ -1338,6 +1380,11 @@ document.getElementById("brushBar").addEventListener("click", (event) => {
   document.querySelectorAll(".brush").forEach((button) => button.classList.remove("active"));
   event.target.classList.add("active");
   showToast(brush === "none" ? "已切回选择模式" : `已切换到${brush === "swap" ? "交换" : shiftMap[brush].label + "班"}模式`);
+});
+
+document.getElementById("clearVisibleBtn").addEventListener("click", (event) => {
+  event.stopPropagation();
+  clearVisibleSchedule();
 });
 
 document.getElementById("roleFilter").addEventListener("click", (event) => {
