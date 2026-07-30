@@ -142,6 +142,55 @@ h2 {
   font-size: 13px;
 }
 
+.plan-field {
+  min-width: 188px;
+}
+
+.source-tag {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.section-note {
+  margin: 8px 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.special-requirements {
+  display: grid;
+  gap: 7px;
+}
+
+.requirement-item {
+  padding: 9px 10px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--soft);
+}
+
+.requirement-item strong,
+.requirement-item span {
+  display: block;
+}
+
+.requirement-item strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.requirement-item span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .primary-btn,
 .secondary-btn,
 .icon-btn,

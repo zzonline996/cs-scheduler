@@ -1,17 +1,38 @@
 const employees = [
-  { id: "e1", name: "谢诗磊", roles: ["在线护士"], nightTarget: 3, continuousNight: false, locked: false },
-  { id: "e2", name: "汪晓萱", roles: ["在线护士"], nightTarget: 3, continuousNight: false, locked: false },
-  { id: "e3", name: "盛婷", roles: ["在线护士"], nightTarget: 3, continuousNight: false, locked: false },
-  { id: "e4", name: "邓嘉妍", roles: ["在线护士"], nightTarget: 3, continuousNight: false, locked: false },
-  { id: "e5", name: "李雅盈", roles: ["在线护士"], nightTarget: 3, continuousNight: false, locked: false },
-  { id: "e6", name: "熊娇娇", roles: ["盯群"], nightTarget: 3, continuousNight: false, locked: false },
-  { id: "e7", name: "刘安安", roles: ["盯群"], nightTarget: 3, continuousNight: false, locked: false },
-  { id: "e8", name: "郭金炎", roles: ["盯群"], nightTarget: 2, continuousNight: false, locked: false },
-  { id: "e9", name: "唐蓓", roles: ["盯群"], nightTarget: 2, continuousNight: false, locked: false },
-  { id: "e10", name: "朱慧妮", roles: ["盯群"], nightTarget: 2, continuousNight: false, locked: false },
-  { id: "e11", name: "胡琳佳", roles: ["盯群", "转潜"], nightTarget: 2, continuousNight: false, locked: false },
-  { id: "e12", name: "方菲菲", roles: ["盯群"], nightTarget: 2, continuousNight: false, locked: false },
-  { id: "e13", name: "张婉柠", roles: ["转潜"], nightTarget: 0, continuousNight: false, locked: false },
+  { id: "e1", name: "李育蓉", roles: ["转潜"], nightTarget: 0, continuousNight: false, locked: false },
+  { id: "e2", name: "胡琳佳", roles: ["盯群", "转潜"], nightTarget: 0, continuousNight: false, locked: false },
+  { id: "e3", name: "邓嘉妍", roles: ["在线护士"], nightTarget: 2, continuousNight: true, locked: false },
+  { id: "e4", name: "盛婷", roles: ["在线护士"], nightTarget: 1, continuousNight: false, locked: false },
+  { id: "e5", name: "李雅盈", roles: ["在线护士"], nightTarget: 3, continuousNight: true, locked: false },
+  { id: "e6", name: "谢诗磊", roles: ["在线护士"], nightTarget: 3, continuousNight: false, locked: false },
+  { id: "e7", name: "刘晨", roles: ["在线护士"], nightTarget: 3, continuousNight: true, locked: false },
+  { id: "e8", name: "熊娇娇", roles: ["盯群"], nightTarget: 2, continuousNight: true, locked: false },
+  { id: "e9", name: "唐蓓", roles: ["盯群"], nightTarget: 3, continuousNight: false, locked: false },
+  { id: "e10", name: "朱惠妮", roles: ["盯群"], nightTarget: 3, continuousNight: false, locked: false },
+  { id: "e11", name: "方菲菲", roles: ["盯群"], nightTarget: 3, continuousNight: false, locked: false },
+  { id: "e12", name: "刘安安", roles: ["盯群"], nightTarget: 4, continuousNight: true, locked: false },
+  { id: "e13", name: "郭金炎", roles: ["盯群"], nightTarget: 4, continuousNight: true, locked: false },
+];
+
+const specialRequirements = [
+  ["李育蓉", "休息尽可能安排在周末；整体覆盖优先。"],
+  ["邓嘉妍", "两个夜班安排在一起。"],
+  ["盛婷", "可行时优先安排双休。"],
+  ["李雅盈", "下半月连续夜班。"],
+  ["刘晨", "连续安排夜班。"],
+  ["熊娇娇", "下半月连续两个夜班，白班优先早班。"],
+  ["唐蓓", "优先周末休息；整体覆盖优先。"],
+  ["朱惠妮", "8 月中旬或月底安排周末双休。"],
+  ["刘安安", "夜班尽量拆成两次上。"],
+  ["郭金炎", "夜班尽量拆成两次，周末休息优先；整体覆盖优先。"],
+];
+
+const planDefinitions = [
+  { id: "p1", name: "方案 1 · 偏好优先", note: "默认：优先落实连续夜班、双休和周末休息。", nights: ["e6","e3","e3","e10","e12","e12","e4","e9","e13","e13","e11","e6","e13","e13","e7","e7","e8","e8","e5","e5","e5","e10","e11","e6","e7","e9","e11","e10","e12","e12","e9"] },
+  { id: "p2", name: "方案 2 · 夜班更均衡", note: "将非指定夜班更多分配给护士与盯群骨干。", nights: ["e9","e3","e3","e4","e12","e12","e10","e11","e13","e13","e6","e9","e13","e13","e7","e7","e8","e8","e5","e5","e5","e11","e10","e6","e7","e9","e11","e10","e12","e12","e6"] },
+  { id: "p3", name: "方案 3 · 周末休息优先", note: "尽量减少唐蓓、郭金炎的周末值夜压力。", nights: ["e11","e3","e3","e6","e12","e12","e4","e10","e13","e13","e9","e11","e13","e13","e7","e7","e8","e8","e5","e5","e5","e6","e10","e11","e7","e9","e6","e10","e12","e12","e9"] },
+  { id: "p4", name: "方案 4 · 护士支援优先", note: "更多保留盯群白班人力，非指定夜班优先由护士承担。", nights: ["e6","e3","e3","e7","e12","e12","e4","e6","e13","e13","e7","e11","e13","e13","e7","e7","e8","e8","e5","e5","e5","e6","e11","e9","e7","e10","e11","e9","e12","e12","e10"] },
+  { id: "p5", name: "方案 5 · 白班稳定优先", note: "减少同一人夜班切换，便于固定白班协同。", nights: ["e10","e3","e3","e11","e12","e12","e4","e9","e13","e13","e6","e11","e13","e13","e7","e7","e8","e8","e5","e5","e5","e10","e6","e11","e7","e9","e10","e11","e12","e12","e6"] },
 ];
 
 const shiftMap = {
@@ -43,7 +64,8 @@ const rolePresets = [
 ];
 
 const state = {
-  dates: makeDates("2026-07"),
+  dates: makeDates("2026-08"),
+  planId: "p1",
   schedule: {},
   selected: null,
   brush: "none",
@@ -66,6 +88,9 @@ const el = {
   toast: document.getElementById("toast"),
   workspace: document.querySelector(".workspace"),
   summaryToggleBtn: document.getElementById("summaryToggleBtn"),
+  planSelect: document.getElementById("planSelect"),
+  specialRequirements: document.getElementById("specialRequirements"),
+  scheduleTitle: document.getElementById("scheduleTitle"),
 };
 
 function makeDates(month) {
@@ -82,6 +107,98 @@ function makeDates(month) {
     });
   }
   return dates;
+}
+
+function selectedPlan() {
+  return planDefinitions.find((plan) => plan.id === state.planId) || planDefinitions[0];
+}
+
+function baseDayShift(employee, dateIndex) {
+  if (hasOnlyRole(employee, "转潜")) return "middle";
+  if (employee.id === "e8") return "early";
+  const weekIndex = Math.floor(dateIndex / 7);
+  return (weekIndex + employees.indexOf(employee)) % 2 === 0 ? "early" : "middle";
+}
+
+function setOff(employeeId, day) {
+  const date = state.dates.find((item) => item.day === day);
+  if (date) state.schedule[employeeId][date.key] = { shift: "off", role: "" };
+}
+
+function setNight(employeeId, day) {
+  const date = state.dates.find((item) => item.day === day);
+  if (date) state.schedule[employeeId][date.key] = { shift: "night", role: "" };
+}
+
+function applyAugustPlan(planId = state.planId) {
+  state.planId = planId;
+  state.dates = makeDates("2026-08");
+  state.schedule = {};
+  employees.forEach((employee) => {
+    state.schedule[employee.id] = {};
+    state.dates.forEach((date, index) => {
+      const shift = baseDayShift(employee, index);
+      state.schedule[employee.id][date.key] = dayCellFor(employee, shift);
+    });
+  });
+
+  selectedPlan().nights.forEach((employeeId, index) => setNight(employeeId, index + 1));
+  employees.forEach((employee) => {
+    state.dates.forEach((date, index) => {
+      const isBlockEnd =
+        getCell(employee.id, date.key).shift === "night" &&
+        (!state.dates[index + 1] || getCell(employee.id, state.dates[index + 1].key).shift !== "night");
+      if (isBlockEnd) applyNightRecovery(employee.id, index);
+    });
+  });
+
+  const preferredRests = {
+    e1: [2, 8, 9, 16, 23, 30],
+    e2: [5, 11, 17, 24, 26, 29],
+    e3: [12, 19, 26, 30],
+    e4: [15, 16, 22, 29],
+    e5: [8, 9, 15, 16],
+    e7: [8, 9],
+    e8: [2, 9, 16, 23],
+    e9: [2, 16],
+    e12: [15],
+    e13: [2, 23],
+  };
+  Object.entries(preferredRests).forEach(([employeeId, days]) => days.forEach((day) => setOff(employeeId, day)));
+
+  state.dates.forEach((date) => {
+    const transfer = getCell("e1", date.key);
+    const hu = getCell("e2", date.key);
+    if (transfer.shift !== "off" && transfer.shift !== "night") state.schedule.e1[date.key] = { shift: "middle", role: "转潜" };
+    if (hu.shift !== "off" && hu.shift !== "night") {
+      state.schedule.e2[date.key] = { shift: transfer.shift === "off" ? "middle" : hu.shift, role: transfer.shift === "off" ? "转潜" : "盯群" };
+    }
+  });
+
+  state.selected = null;
+  state.brush = "none";
+  state.swapFrom = null;
+  enforceShiftRules();
+  enforceContinuousWorkLimit();
+  state.dates.forEach((date) => {
+    const li = getCell("e1", date.key);
+    const hu = getCell("e2", date.key);
+    if (li.shift === "off" && hu.shift !== "off" && hu.shift !== "night") {
+      state.schedule.e2[date.key] = { shift: "middle", role: "转潜" };
+    }
+  });
+  state.dates.forEach((date) => fixEarlySupport(date.key));
+}
+
+function renderPlanControls() {
+  el.planSelect.innerHTML = planDefinitions
+    .map((plan) => `<option value="${plan.id}" ${plan.id === state.planId ? "selected" : ""}>${plan.name}</option>`)
+    .join("");
+  el.planSelect.disabled = state.dates[0]?.key.slice(0, 7) !== "2026-08";
+  el.scheduleTitle.textContent = `${state.dates[0]?.key.slice(5, 7) || ""} 月排班表`;
+  el.specialRequirements.innerHTML = specialRequirements
+    .map(([name, requirement]) => `<div class="requirement-item"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(requirement)}</span></div>`)
+    .join("");
 }
 
 function createInitialSchedule(targetEmployees = employees) {
@@ -571,16 +688,23 @@ function enforceContinuousWorkLimit(targetEmployees = employees) {
   targetEmployees.forEach((employee) => {
     if (employee.locked) return;
     let streak = 0;
-    state.dates.forEach((date) => {
+    let segmentStart = 0;
+    state.dates.forEach((date, dateIndex) => {
       const cell = getCell(employee.id, date.key);
       if (cell.shift === "off") {
         streak = 0;
+        segmentStart = dateIndex + 1;
         return;
       }
       streak += 1;
-      if (streak > 7 && cell.shift !== "night") {
-        state.schedule[employee.id][date.key] = { shift: "off", role: "" };
-        streak = 0;
+      if (streak > 7) {
+        let restIndex = cell.shift === "night" ? dateIndex - 1 : dateIndex;
+        while (restIndex >= segmentStart && getCell(employee.id, state.dates[restIndex].key).shift === "night") restIndex -= 1;
+        if (restIndex >= segmentStart) {
+          state.schedule[employee.id][state.dates[restIndex].key] = { shift: "off", role: "" };
+          streak = dateIndex - restIndex;
+          segmentStart = restIndex + 1;
+        }
       }
     });
   });
@@ -602,6 +726,7 @@ function isNightRecoveryDay(employeeId, dateIndex) {
 }
 
 function render() {
+  renderPlanControls();
   renderEmployees();
   renderTable();
   renderChecks();
@@ -1089,18 +1214,6 @@ function allConflicts() {
   });
 
   employees.forEach((employee) => {
-    const rest = summaryFor(employee.id).actualRest;
-    if (rest !== 6) {
-      conflicts.push({
-        level: "bad",
-        title: `${employee.name} 基础休息异常`,
-        desc: `当前实际休息 ${formatDays(rest)} 天，基础规则是每月固定 6 天；汇总里的休息天数会额外加夜班补休。`,
-        action: () => {
-          enforceExactRestDays([employee]);
-          enforceDailyNightCoverage([employee]);
-        },
-      });
-    }
     state.dates.forEach((date) => {
       cellWarnings(employee.id, date.key).forEach((warning) => {
         conflicts.push({
@@ -1124,10 +1237,9 @@ function renderChecks() {
     early: conflicts.some((item) => item.title.includes("早班覆盖")),
     nightRecovery: conflicts.some((item) => item.desc.includes("夜班后") || item.desc.includes("连续夜班")),
     nightDaily: conflicts.some((item) => item.title.includes("夜班人数")),
-    restFixed: conflicts.some((item) => item.title.includes("基础休息异常")),
   };
   const cards = [
-    ["基础休息6天", ruleStatus.restFixed ? "需处理" : "已满足", ruleStatus.restFixed ? "bad" : ""],
+    ["基础休息参考6天", "结合夜班补休与特殊需求安排", ""],
     ["每天夜班1人", ruleStatus.nightDaily ? "需处理" : "已满足", ruleStatus.nightDaily ? "bad" : ""],
     ["连续上班≤7天", ruleStatus.continuous ? "需处理" : "已满足", ruleStatus.continuous ? "bad" : ""],
     ["早中班按周连续", "同一员工一周内尽量连续早班或连续中班", ""],
@@ -1504,6 +1616,12 @@ document.getElementById("redoBtn").addEventListener("click", () => {
 
 document.getElementById("generateBtn").addEventListener("click", () => {
   pushUndo();
+  if (state.dates[0]?.key.slice(0, 7) === "2026-08") {
+    applyAugustPlan(state.planId);
+    render();
+    showToast(`${selectedPlan().name} 已重新生成`);
+    return;
+  }
   const targets = visibleEmployees();
   createInitialSchedule(targets);
   render();
@@ -1529,15 +1647,25 @@ document.getElementById("addEmployeeBtn").addEventListener("click", () => {
 document.getElementById("monthSelect").addEventListener("change", (event) => {
   pushUndo();
   state.dates = makeDates(event.target.value);
-  createInitialSchedule();
+  if (event.target.value === "2026-08") {
+    applyAugustPlan(state.planId);
+  } else {
+    createInitialSchedule();
+  }
   state.selected = null;
   render();
   showToast("月份已切换并重新生成排班");
+});
+el.planSelect.addEventListener("change", (event) => {
+  pushUndo();
+  applyAugustPlan(event.target.value);
+  render();
+  showToast(`${selectedPlan().name} 已切换`);
 });
 el.conflictOnly.addEventListener("change", (event) => {
   state.filterConflict = event.target.checked;
   renderChecks();
 });
 
-createInitialSchedule();
+applyAugustPlan();
 render();
