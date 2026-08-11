@@ -77,6 +77,11 @@ const state = {
   summaryCollapsed: false,
 };
 
+const CLOUD_BASE_ENV = "zzonline-d4gu5ualed205f713";
+const CLOUD_SCHEDULE_COLLECTION = "scheduler_workspaces";
+const CLOUD_SCHEDULE_ID = "wuhan-customer-service-current";
+let cloudDb = null;
+
 const el = {
   employeeList: document.getElementById("employeeList"),
   ruleCards: document.getElementById("ruleCards"),
@@ -619,6 +624,55 @@ function snapshot() {
     schedule: state.schedule,
     employees: employees.map((emp) => ({ ...employeeDefaults(emp), roles: [...emp.roles] })),
   });
+}
+
+function cloudPayload() {
+  return {
+    schedule: state.schedule,
+    employees: employees.map((emp) => ({ ...employeeDefaults(emp), roles: [...emp.roles] })),
+    updatedAt: new Date().toISOString(),
+    schemaVersion: 1,
+  };
+}
+
+async function initCloudBase() {
+  if (!window.cloudbase) throw new Error("CloudBase SDK 未加载");
+  const app = window.cloudbase.init({ env: CLOUD_BASE_ENV });
+  const auth = app.auth({ persistence: "local" });
+  await auth.signInAnonymously();
+  cloudDb = app.database();
+}
+
+async function loadCloudSchedule() {
+  if (!cloudDb) return;
+  const result = await cloudDb.collection(CLOUD_SCHEDULE_COLLECTION).doc(CLOUD_SCHEDULE_ID).get();
+  const remote = result.data;
+  if (!remote?.schedule || !Array.isArray(remote.employees)) return;
+  employees.splice(0, employees.length, ...remote.employees.map((emp) => employeeDefaults({ ...emp, roles: [...emp.roles] })));
+  state.schedule = remote.schedule;
+  enforceShiftRules();
+  render();
+  showToast(`已读取云端排班（${new Date(remote.updatedAt).toLocaleString("zh-CN")}）`);
+}
+
+async function saveCloudSchedule() {
+  const saveButton = document.getElementById("saveBtn");
+  if (!cloudDb) {
+    showToast("云端尚未连接，请稍后重试");
+    return;
+  }
+  saveButton.disabled = true;
+  saveButton.textContent = "保存中…";
+  try {
+    await cloudDb.collection(CLOUD_SCHEDULE_COLLECTION).doc(CLOUD_SCHEDULE_ID).set(cloudPayload());
+    showToast("已保存到 CloudBase，其他设备刷新后可读取");
+  } catch (error) {
+    console.error(error);
+    showToast("云端保存失败，请检查数据库权限和安全域名");
+  } finally {
+    saveButton.disabled = false;
+    saveButton.textContent = "保存到云端";
+  }
 }
 
 function pushUndo() {
@@ -1629,6 +1683,7 @@ document.getElementById("generateBtn").addEventListener("click", () => {
 });
 
 document.getElementById("exportBtn").addEventListener("click", exportExcel);
+document.getElementById("saveBtn").addEventListener("click", saveCloudSchedule);
 document.getElementById("addEmployeeBtn").addEventListener("click", () => {
   const name = prompt("请输入员工姓名");
   if (!name) return;
@@ -1669,3 +1724,9 @@ el.conflictOnly.addEventListener("change", (event) => {
 
 applyAugustPlan();
 render();
+initCloudBase()
+  .then(loadCloudSchedule)
+  .catch((error) => {
+    console.error(error);
+    showToast("云端尚未启用：当前仍可编辑，保存功能待数据库配置完成");
+  });
