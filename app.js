@@ -77,6 +77,11 @@ const state = {
   summaryCollapsed: false,
 };
 
+const CLOUD_BASE_ENV = "zzonline-d4gu5ualed205f713";
+const CLOUD_BASE_ACCESS_KEY = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjA4OTlhZWQyLWNmZjItNDYxNi04ZjMxLTVkNGY1M2ViNTJjZSJ9.eyJpc3MiOiJodHRwczovL3p6em9ubGluZS1kNGd1NXVhbGVkMjA1ZjcxMyIsInN1YiI6ImFub24iLCJhdWQiOiJ6em9ubGluZS1kNGd1NXVhbGVkMjA1ZjcxMyIsImV4cCI6NDA5MDE0MjQyMiwiaWF0IjoxNzg2NDU5MjIyLCJub25jZSI6IjNTZHp4Uy1sUXlTLXRsWV9BRTVxZlEiLCJhdF9oYXNoIjoiM1NkenhTLWxReVMtdGxZX0FFNXFmUSIsIm5hbWUiOiJBbm9ueW1vdXMiLCJzY29wZSI6ImFub255bW91cyIsInByb2plY3RfaWQiOiJ6em9ubGluZS1kNGd1NXVhbGVkMjA1ZjcxMyIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbiIsImlzX2Fub255bW91cyI6dHJ1ZSwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiYW5vbnltb3VzIiwicHJvdmlkZXJzIjpbImFub255bW91cyJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiQW5vbnltb3VzIn0sInVzZXJfdHlwZSI6IiIsImNsaWVudF90eXBlIjoiY2xpZW50X3VzZXIiLCJpc19zeXN0ZW1fYWRtaW4iOmZhbHNlfQ.m2lEMFRKzF65hWW4Nl-OGfW2x02WiVHTjLovkdII4lX4auKz-m6k7OiXFUVsDV3ZAe0krT6DBriCgWVCq4sxjJ6M006zmWouG-QhBcUgxRA0wUjIeh5rOW_lPCdE9AUXie-BuliO3Kn8UEXqfwlrmpERejCpmfY-duKX8lug21_sXhO40lg2OhcyyXCWWX6r2TPUL8G0qid0nl2Mwddi3AGvfujlVLz7WEfBVT2gFV2e_YoZGM7SYpXPzPxCyCKAsUYVBc3UbEN0pdZsg5Lgb6rdVxgSgcediILDyrHpj-gdZY5clDSL8sUoQRysRKjr4GqypwxvHxdhmFVJtRXiMg";
+const CLOUD_SCHEDULE_ID = "wuhan-customer-service-current";
+let cloudDb = null;
+
 const el = {
   employeeList: document.getElementById("employeeList"),
   ruleCards: document.getElementById("ruleCards"),
@@ -619,6 +624,68 @@ function snapshot() {
     schedule: state.schedule,
     employees: employees.map((emp) => ({ ...employeeDefaults(emp), roles: [...emp.roles] })),
   });
+}
+
+function cloudPayload() {
+  return {
+    schedule: state.schedule,
+    employees: employees.map((emp) => ({ ...employeeDefaults(emp), roles: [...emp.roles] })),
+    updatedAt: new Date().toISOString(),
+    schemaVersion: 1,
+  };
+}
+
+async function initCloudBase() {
+  if (!window.cloudbase) throw new Error("CloudBase SDK 未加载");
+  const app = window.cloudbase.init({
+    env: CLOUD_BASE_ENV,
+    accessKey: CLOUD_BASE_ACCESS_KEY,
+  });
+  const auth = app.auth({ persistence: "local" });
+  const { error } = await auth.signInAnonymously();
+  if (error) throw error;
+  cloudDb = app.rdb();
+}
+
+async function loadCloudSchedule() {
+  if (!cloudDb) return;
+  const { data, error } = await cloudDb
+    .from("schedule_workspaces")
+    .select("workspace_key,payload,updated_at")
+    .eq("workspace_key", CLOUD_SCHEDULE_ID)
+    .limit(1);
+  if (error) throw error;
+  const remote = data?.[0];
+  if (!remote?.payload?.schedule || !Array.isArray(remote.payload.employees)) return;
+  employees.splice(0, employees.length, ...remote.payload.employees.map((emp) => employeeDefaults({ ...emp, roles: [...emp.roles] })));
+  state.schedule = remote.payload.schedule;
+  enforceShiftRules();
+  render();
+  showToast(`已读取云端排班（${new Date(remote.updated_at).toLocaleString("zh-CN")}）`);
+}
+
+async function saveCloudSchedule() {
+  const saveButton = document.getElementById("saveBtn");
+  if (!cloudDb) {
+    showToast("云端尚未连接，请稍后重试");
+    return;
+  }
+  saveButton.disabled = true;
+  saveButton.textContent = "保存中…";
+  try {
+    const { error } = await cloudDb
+      .from("schedule_workspaces")
+      .update({ payload: cloudPayload(), updated_at: new Date().toISOString() })
+      .eq("workspace_key", CLOUD_SCHEDULE_ID);
+    if (error) throw error;
+    showToast("已保存到 CloudBase，其他设备刷新后可读取");
+  } catch (error) {
+    console.error(error);
+    showToast("云端保存失败，请检查数据库权限和安全域名");
+  } finally {
+    saveButton.disabled = false;
+    saveButton.textContent = "保存到云端";
+  }
 }
 
 function pushUndo() {
@@ -1629,6 +1696,7 @@ document.getElementById("generateBtn").addEventListener("click", () => {
 });
 
 document.getElementById("exportBtn").addEventListener("click", exportExcel);
+document.getElementById("saveBtn").addEventListener("click", saveCloudSchedule);
 document.getElementById("addEmployeeBtn").addEventListener("click", () => {
   const name = prompt("请输入员工姓名");
   if (!name) return;
@@ -1669,3 +1737,9 @@ el.conflictOnly.addEventListener("change", (event) => {
 
 applyAugustPlan();
 render();
+initCloudBase()
+  .then(loadCloudSchedule)
+  .catch((error) => {
+    console.error(error);
+    showToast("云端尚未启用：当前仍可编辑，保存功能待数据库配置完成");
+  });
