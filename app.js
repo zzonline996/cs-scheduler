@@ -638,7 +638,8 @@ async function initCloudBase() {
   if (!window.cloudbase) throw new Error("CloudBase SDK 未加载");
   const app = window.cloudbase.init({ env: CLOUD_BASE_ENV });
   const auth = app.auth({ persistence: "local" });
-  await auth.signInAnonymously();
+  const { error } = await auth.signInAnonymously();
+  if (error) throw error;
   cloudDb = app.rdb();
 }
 
