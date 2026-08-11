@@ -78,6 +78,7 @@ const state = {
 };
 
 const CLOUD_BASE_ENV = "zzonline-d4gu5ualed205f713";
+const CLOUD_BASE_ACCESS_KEY = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjA4OTlhZWQyLWNmZjItNDYxNi04ZjMxLTVkNGY1M2ViNTJjZSJ9.eyJpc3MiOiJodHRwczovL3p6em9ubGluZS1kNGd1NXVhbGVkMjA1ZjcxMyIsInN1YiI6ImFub24iLCJhdWQiOiJ6em9ubGluZS1kNGd1NXVhbGVkMjA1ZjcxMyIsImV4cCI6NDA5MDE0MjQyMiwiaWF0IjoxNzg2NDU5MjIyLCJub25jZSI6IjNTZHp4Uy1sUXlTLXRsWV9BRTVxZlEiLCJhdF9oYXNoIjoiM1NkenhTLWxReVMtdGxZX0FFNXFmUSIsIm5hbWUiOiJBbm9ueW1vdXMiLCJzY29wZSI6ImFub255bW91cyIsInByb2plY3RfaWQiOiJ6em9ubGluZS1kNGd1NXVhbGVkMjA1ZjcxMyIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbiIsImlzX2Fub255bW91cyI6dHJ1ZSwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiYW5vbnltb3VzIiwicHJvdmlkZXJzIjpbImFub255bW91cyJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiQW5vbnltb3VzIn0sInVzZXJfdHlwZSI6IiIsImNsaWVudF90eXBlIjoiY2xpZW50X3VzZXIiLCJpc19zeXN0ZW1fYWRtaW4iOmZhbHNlfQ.m2lEMFRKzF65hWW4Nl-OGfW2x02WiVHTjLovkdII4lX4auKz-m6k7OiXFUVsDV3ZAe0krT6DBriCgWVCq4sxjJ6M006zmWouG-QhBcUgxRA0wUjIeh5rOW_lPCdE9AUXie-BuliO3Kn8UEXqfwlrmpERejCpmfY-duKX8lug21_sXhO40lg2OhcyyXCWWX6r2TPUL8G0qid0nl2Mwddi3AGvfujlVLz7WEfBVT2gFV2e_YoZGM7SYpXPzPxCyCKAsUYVBc3UbEN0pdZsg5Lgb6rdVxgSgcediILDyrHpj-gdZY5clDSL8sUoQRysRKjr4GqypwxvHxdhmFVJtRXiMg";
 const CLOUD_SCHEDULE_ID = "wuhan-customer-service-current";
 let cloudDb = null;
 
@@ -636,7 +637,10 @@ function cloudPayload() {
 
 async function initCloudBase() {
   if (!window.cloudbase) throw new Error("CloudBase SDK 未加载");
-  const app = window.cloudbase.init({ env: CLOUD_BASE_ENV });
+  const app = window.cloudbase.init({
+    env: CLOUD_BASE_ENV,
+    accessKey: CLOUD_BASE_ACCESS_KEY,
+  });
   const auth = app.auth({ persistence: "local" });
   const { error } = await auth.signInAnonymously();
   if (error) throw error;
