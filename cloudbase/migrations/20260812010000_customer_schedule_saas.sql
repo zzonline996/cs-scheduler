@@ -37,13 +37,13 @@ GRANT SELECT, INSERT ON TABLE public.schedule_audit_events TO authenticated;
 DROP POLICY IF EXISTS customer_schedule_baseline_read ON public.schedule_baselines;
 CREATE POLICY customer_schedule_baseline_read ON public.schedule_baselines
   FOR SELECT TO authenticated
-  USING (auth.uid() = '2087352270338318338');
+  USING (auth.uid() = '2087355420017889282');
 
 DROP POLICY IF EXISTS customer_schedule_audit_read ON public.schedule_audit_events;
 DROP POLICY IF EXISTS customer_schedule_audit_insert ON public.schedule_audit_events;
 CREATE POLICY customer_schedule_audit_read ON public.schedule_audit_events
   FOR SELECT TO authenticated
-  USING (auth.uid() = '2087352270338318338');
+  USING (auth.uid() = '2087355420017889282');
 CREATE POLICY customer_schedule_audit_insert ON public.schedule_audit_events
   FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = '2087352270338318338' AND actor_id = auth.uid());
+  WITH CHECK (auth.uid() = '2087355420017889282' AND actor_id = auth.uid());
