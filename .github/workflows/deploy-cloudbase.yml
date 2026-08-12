@@ -1,0 +1,41 @@
+name: Deploy scheduler to CloudBase
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cloudbase-cs-scheduler-production
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy CloudBase static app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install CloudBase CLI
+        run: npm install -g @cloudbase/cli@3.7.3
+
+      - name: Deploy production app
+        env:
+          TCB_ENV_ID: ${{ secrets.TCB_ENV_ID }}
+          TCB_CLOUDBASE_API_KEY: ${{ secrets.TCB_CLOUDBASE_API_KEY }}
+        run: |
+          tcb login --cloudbase-api-key "$TCB_CLOUDBASE_API_KEY" --env-id "$TCB_ENV_ID"
+          tcb app deploy cs-scheduler \
+            --env-id "$TCB_ENV_ID" \
+            --framework static \
+            --install-command '' \
+            --build-command '' \
+            --output-dir . \
+            --deploy-path / \
+            --ignore '.git/**,specs/**,cloudbase/**,.github/**' \
+            --force \
+            --json
